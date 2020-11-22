@@ -8,6 +8,8 @@ public class RenderGameObjects : ScriptableObject {
   public GameObject RenderBoardWizard;
   public GameObject RenderBoardDragon;
 
+  public GameObject RenderHand;
+
   public Material Team1Material;
   public Material Team2Material;
 

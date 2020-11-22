@@ -1,5 +1,6 @@
 ﻿using Unity.Entities;
 using Unity.Jobs;
+using Unity.Transforms;
 using UnityEngine;
 
 public class RenderDragonInstance : ISystemStateComponentData {
@@ -109,7 +110,7 @@ public class BoardRenderingSystem : SystemBase {
 
     Entities
     .WithName("Render_Wizard_On_Board")
-    .ForEach((Entity e, RenderWizardInstance renderWizard, in TilePosition tilePosition, in PlayerIndex playerIndex, in Unity.Transforms.Rotation rotation) => {
+    .ForEach((Entity e, RenderWizardInstance renderWizard, in TilePosition tilePosition, in PlayerIndex playerIndex, in Rotation rotation) => {
       renderWizard.Instance.GetComponent<RenderWizard>().SetMaterialForPlayerIndex(renderGameObjects.Team1Material, renderGameObjects.Team2Material, playerIndex.Value);
       renderWizard.Instance.transform.SetPositionAndRotation(tilePosition.WorldPosition, rotation.Value);
     })
@@ -118,7 +119,7 @@ public class BoardRenderingSystem : SystemBase {
 
     Entities
     .WithName("Render_Dragon_On_Board")
-    .ForEach((Entity e, RenderDragonInstance renderDragon, in TilePosition tilePosition, in Unity.Transforms.Rotation rotation) => {
+    .ForEach((Entity e, RenderDragonInstance renderDragon, in TilePosition tilePosition, in Rotation rotation) => {
       renderDragon.Instance.transform.SetPositionAndRotation(tilePosition.WorldPosition, rotation.Value);
     })
     .WithoutBurst()

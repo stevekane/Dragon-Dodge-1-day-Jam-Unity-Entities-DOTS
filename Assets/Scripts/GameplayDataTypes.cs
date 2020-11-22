@@ -8,7 +8,7 @@ public enum Element { Earth, Wind, Fire, Water }
 
 public enum Spell { Rotate, Move, Place }
 
-public enum Rotation { North = 0, East, South, West }
+public enum CardinalRotation { North = 0, East, South, West }
 
 public enum GameState { Ready, SelectingAction, PlayingAction, GameOver }
 
@@ -47,7 +47,7 @@ public struct TilePosition : IComponentData {
 public struct TileRotation : IComponentData {
   const float QUARTER_ROTATION_RADIANS = PI / 2f;
 
-  public Rotation Value;
+  public CardinalRotation Value;
 
   public Quaternion WorldRotation {
     get { return Quaternion.AngleAxis((float)Value * QUARTER_ROTATION_RADIANS, Vector3.up); }
