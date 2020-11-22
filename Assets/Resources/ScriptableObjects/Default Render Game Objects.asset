@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e60c4a2abe868cb40bd111fafc06a30a, type: 3}
+  m_Name: Default Render Game Objects
+  m_EditorClassIdentifier: 
+  RenderBoardTile: {fileID: 6036393446994308691, guid: 28a33539df916c949b7c80eb9cea4b2c, type: 3}
+  RenderBoardWizard: {fileID: 3451773042838031935, guid: 21a2c59c1a221bc4a982452c57ade1e9, type: 3}
+  RenderBoardDragon: {fileID: 8712534155992576530, guid: 87864b069fae7174d9efd7df3730231f, type: 3}
+  Team1Material: {fileID: 2100000, guid: 8197f4e95ab55294ea66b69c9b800157, type: 2}
+  Team2Material: {fileID: 2100000, guid: b098acdf588cbc340945a4d279b4da43, type: 2}
+  EarthMaterial: {fileID: 2100000, guid: f1fcc9abe5ec09d48888a1c20352f3e1, type: 2}
+  FireMaterial: {fileID: 2100000, guid: 487d59f0ddd0a9c4ab49b793899c8200, type: 2}
+  WindMaterial: {fileID: 2100000, guid: b412aa39db2e0db48be8b4c3073883aa, type: 2}
+  WaterMaterial: {fileID: 2100000, guid: e503594a9914a584da7654a5fe811059, type: 2}
