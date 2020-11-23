@@ -16,6 +16,14 @@ MonoBehaviour:
   RenderBoardWizard: {fileID: 3451773042838031935, guid: 21a2c59c1a221bc4a982452c57ade1e9, type: 3}
   RenderBoardDragon: {fileID: 8712534155992576530, guid: 87864b069fae7174d9efd7df3730231f, type: 3}
   RenderHand: {fileID: 7633480550401759987, guid: 9967d48f579615844ac1b5f98081ccf6, type: 3}
+  HandRenderTile: {fileID: 4920842591525604008, guid: c627aae451865744cbb04f20dd81e0d5, type: 3}
+  HandRenderElementCardEarth: {fileID: 8714163364622519532, guid: ea40736b8329292458ec5281bdb346fc, type: 3}
+  HandRenderElementCardFire: {fileID: 2878166485642639736, guid: 5023623c4356c874f97a743806018c4b, type: 3}
+  HandRenderElementCardWind: {fileID: 1239047105061887269, guid: ffe2a6d4e59bc8545826154d733dc970, type: 3}
+  HandRenderElementCardWater: {fileID: 3791185120889261224, guid: 2100ea7dcf61c574b8c31e7244331d71, type: 3}
+  HandRenderSpellCardRotate: {fileID: 5562352744868139580, guid: a0ead5a4c49c9024d912b3cc6d443e38, type: 3}
+  HandRenderSpellCardMove: {fileID: 302704458151758226, guid: f48188a158836544aabd1f3b86abba98, type: 3}
+  HandRenderSpellCardPlace: {fileID: 9095743353353112967, guid: 3b98a10b9c3e90f49be916d9940caa19, type: 3}
   Team1Material: {fileID: 2100000, guid: 8197f4e95ab55294ea66b69c9b800157, type: 2}
   Team2Material: {fileID: 2100000, guid: b098acdf588cbc340945a4d279b4da43, type: 2}
   EarthMaterial: {fileID: 2100000, guid: f1fcc9abe5ec09d48888a1c20352f3e1, type: 2}
