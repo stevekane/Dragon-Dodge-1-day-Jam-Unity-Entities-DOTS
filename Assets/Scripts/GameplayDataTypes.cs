@@ -4,13 +4,58 @@ using Unity.Entities;
 using UnityEngine;
 using static Unity.Mathematics.math;
 
-public enum Element { Earth, Wind, Fire, Water }
+public enum Element { 
+  Earth, 
+  Wind, 
+  Fire, 
+  Water
+}
 
-public enum Spell { Rotate, Move, Place }
+public enum Spell { 
+  Rotate, 
+  Move, 
+  Place 
+}
 
-public enum CardinalRotation { North = 0, East, South, West }
+public enum CardinalRotation { 
+  North = 0, 
+  East, 
+  South, 
+  West 
+}
 
-public enum GameState { Loading, Ready, SelectingAction, PlayingAction, GameOver }
+public enum GameState { 
+  Loading, 
+  Ready, 
+  TakingTurn,
+  GameOver 
+}
+
+public enum ActionState {
+  Base,
+  RotateCardSelected,
+  BoardTileToRotateSelected,
+  RotationSelected,
+  PlayingRotationAction
+}
+
+public struct PlayerAction : IComponentData {}
+
+public struct SelectCard : IComponentData {
+  public Entity Value;
+}
+
+public struct SelectTile : IComponentData {
+  public Entity Value;
+}
+
+public struct SelectTilePosition : IComponentData {
+  public int2 Value;
+}
+
+public struct SelectCardinalRotation : IComponentData {
+  public CardinalRotation Value;
+}
 
 public struct ElementCard : IComponentData {
   public Element Element;
