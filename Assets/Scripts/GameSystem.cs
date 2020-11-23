@@ -126,8 +126,9 @@ public class GameSystem : SystemBase {
     var handSpellCardsEntity = hand.SpellCardsRootEntity;
     var handElementCardsEntity = hand.ElementCardsRootEntity;
     var handSpellCardsLocalToWorld = entityManager.GetComponentData<LocalToWorld>(handSpellCardsEntity);
-    var handElementCardsLocalToWorld = entityManager.GetComponentData<LocalToWorld>(handSpellCardsEntity);
+    var handElementCardsLocalToWorld = entityManager.GetComponentData<LocalToWorld>(handElementCardsEntity);
     
+    // TODO: OCD... but maybe could lift the spellCardDeckBuffer and elementCardDeckBuffer into locals now...
     if (TryDraw(entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>(), out Entity spellCardEntity)) {
       var handSpellCardsBuffer = entityManager.GetBuffer<SpellCardEntry>(handSpellCardsEntity);
       var index = handSpellCardsBuffer.Length;
@@ -206,9 +207,10 @@ public class GameSystem : SystemBase {
 
         case GameState.TakingTurn: {
           if (mouseDown && TryPick(tileFromEntity, collisionWorld, screenRay, out RaycastHit hit)) {
-            var activeHandEntity = (game.CurrentTurnPlayerIndex + 1) % 2 == 0 ? player1HandEntity : player2HandEntity;
+            var nextTurnPlayerIndex = (game.CurrentTurnPlayerIndex + 1) % 2;
+            var activeHandEntity = nextTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
 
-            game.CurrentTurnPlayerIndex = game.CurrentTurnPlayerIndex == 0 ? 1 : 0;
+            game.CurrentTurnPlayerIndex = nextTurnPlayerIndex;
             DrawCardsForTurn(EntityManager, activeHandEntity, spellCardDeckEntity, elementCardDeckEntity);
             game.GameState = GameState.TakingTurn;
           }
