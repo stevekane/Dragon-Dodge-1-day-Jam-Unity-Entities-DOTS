@@ -10,7 +10,7 @@ public enum Spell { Rotate, Move, Place }
 
 public enum CardinalRotation { North = 0, East, South, West }
 
-public enum GameState { Ready, SelectingAction, PlayingAction, GameOver }
+public enum GameState { Loading, Ready, SelectingAction, PlayingAction, GameOver }
 
 public struct ElementCard : IComponentData {
   public Element Element;
@@ -18,6 +18,18 @@ public struct ElementCard : IComponentData {
 
 public struct SpellCard : IComponentData {
   public Spell Spell;
+}
+
+public struct ElementCardDeck : IComponentData {}
+
+public struct SpellCardDeck : IComponentData {}
+
+public struct ElementCardDeckEntry : IBufferElementData {
+  public Entity ElementCardEntity;
+}
+
+public struct SpellCardDeckEntry : IBufferElementData {
+  public Entity SpellCardEntity;
 }
 
 public struct PlayerIndex : ISharedComponentData {

@@ -135,6 +135,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7633480550401759988}
+  - component: {fileID: 194916298841023431}
   m_Layer: 0
   m_Name: RenderHand
   m_TagString: Untagged
@@ -159,6 +160,21 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &194916298841023431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7633480550401759987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d48a50a5af6d3b4d9d768c6f505deb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  TilesTransform: {fileID: 7633480549632299824}
+  ElementCardsTransform: {fileID: 7633480550337172550}
+  SpellCardsTransform: {fileID: 7633480550130635555}
 --- !u!1001 &1392585121839292663
 PrefabInstance:
   m_ObjectHideFlags: 0
