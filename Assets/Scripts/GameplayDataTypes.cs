@@ -69,16 +69,26 @@ public struct ElementCardDeck : IComponentData {}
 
 public struct SpellCardDeck : IComponentData {}
 
-public struct ElementCardDeckEntry : IBufferElementData {
+public struct ElementCardEntry : IBufferElementData {
   public Entity ElementCardEntity;
 }
 
-public struct SpellCardDeckEntry : IBufferElementData {
+public struct SpellCardEntry : IBufferElementData {
   public Entity SpellCardEntity;
+}
+
+public struct TileEntry : IBufferElementData {
+  public Entity TileEntity;
 }
 
 public struct PlayerIndex : ISharedComponentData {
   public int Value;
+}
+
+public struct Hand : IComponentData {
+  public Entity TilesRootEntity;
+  public Entity SpellCardsRootEntity;
+  public Entity ElementCardsRootEntity;
 }
 
 [Serializable]

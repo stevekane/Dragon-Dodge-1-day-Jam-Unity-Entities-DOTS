@@ -62,8 +62,8 @@ public class GameSystem : SystemBase {
 
     entityManager.RemoveComponent<PlayerIndex>(spellCards);
     entityManager.RemoveComponent<PlayerIndex>(elementCards);
-    entityManager.GetBuffer<SpellCardDeckEntry>(spellCardDeckEntity).Reinterpret<Entity>().CopyFrom(spellCards);
-    entityManager.GetBuffer<ElementCardDeckEntry>(elementCardDeckEntity).Reinterpret<Entity>().CopyFrom(elementCards);
+    entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>().CopyFrom(spellCards);
+    entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Reinterpret<Entity>().CopyFrom(elementCards);
     spellCards.Dispose();
     elementCards.Dispose();
   }
@@ -89,8 +89,8 @@ public class GameSystem : SystemBase {
   Entity spellCardDeckEntity,
   Entity elementCardDeckEntity,
   uint seed) {
-    Shuffle(entityManager.GetBuffer<SpellCardDeckEntry>(spellCardDeckEntity), seed);
-    Shuffle(entityManager.GetBuffer<ElementCardDeckEntry>(elementCardDeckEntity), seed);
+    Shuffle(entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity), seed);
+    Shuffle(entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity), seed);
   }
 
   public static bool TryDraw(
@@ -113,10 +113,10 @@ public class GameSystem : SystemBase {
   int currentTurnPlayerIndex) {
     var playerIndex = new PlayerIndex { Value = currentTurnPlayerIndex };
     
-    if (TryDraw(entityManager.GetBuffer<SpellCardDeckEntry>(spellCardDeckEntity).Reinterpret<Entity>(), out Entity elementCardEntity)) {
+    if (TryDraw(entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>(), out Entity elementCardEntity)) {
       entityManager.AddSharedComponentData(elementCardEntity, playerIndex);
     }
-    if (TryDraw(entityManager.GetBuffer<ElementCardDeckEntry>(elementCardDeckEntity).Reinterpret<Entity>(), out Entity spellCardEntity)) {
+    if (TryDraw(entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Reinterpret<Entity>(), out Entity spellCardEntity)) {
       entityManager.AddSharedComponentData(spellCardEntity, playerIndex);
     }
   }
@@ -138,8 +138,8 @@ public class GameSystem : SystemBase {
     SceneSystem = World.GetExistingSystem<SceneSystem>();
     BuildPhysicsWorld = World.GetExistingSystem<BuildPhysicsWorld>();
     EntityManager.CreateEntity(typeof(Game));
-    EntityManager.CreateEntity(typeof(ElementCardDeck), typeof(ElementCardDeckEntry));
-    EntityManager.CreateEntity(typeof(SpellCardDeck), typeof(SpellCardDeckEntry));
+    EntityManager.CreateEntity(typeof(ElementCardDeck), typeof(ElementCardEntry));
+    EntityManager.CreateEntity(typeof(SpellCardDeck), typeof(SpellCardEntry));
     RequireSingletonForUpdate<Game>();
     RequireSingletonForUpdate<SpellCardDeck>();
     RequireSingletonForUpdate<ElementCardDeck>();
@@ -171,6 +171,12 @@ public class GameSystem : SystemBase {
           ReturnCardsToDeck(EntityManager, spellCardDeckEntity, elementCardDeckEntity, SpellCardQuery, ElementCardQuery);
           ShuffleCardsInDeck(EntityManager, spellCardDeckEntity, elementCardDeckEntity, 1);
           DrawCardsForTurn(EntityManager, spellCardDeckEntity, elementCardDeckEntity, game.CurrentTurnPlayerIndex);
+          // When a player draws cards, they need to actually store them in their hand in some order
+          // The cards need to have a physical position that is derived from the location of the hands
+          // in world space
+          // This means I need to create singletons for PlayerXSpellCards, PlayerXElementCards, PlayerXTiles, PlayerX Pass Button
+          // When a player draws a card, it should get added to their hand AND placed in physical space according to its
+          // order in the hand
           game.GameState = GameState.TakingTurn;
         }
         break;
