@@ -178,6 +178,10 @@ PrefabInstance:
       propertyPath: PlayerIndex
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3312626781071522865, guid: 49db899e33a4dbd44a9f3a5e50963b68, type: 3}
+      propertyPath: OwningPlayer
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3312626781071522871, guid: 49db899e33a4dbd44a9f3a5e50963b68, type: 3}
       propertyPath: m_Name
       value: Player 2 Hand

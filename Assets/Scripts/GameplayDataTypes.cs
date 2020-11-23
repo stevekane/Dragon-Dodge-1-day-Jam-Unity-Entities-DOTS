@@ -81,6 +81,10 @@ public struct TileEntry : IBufferElementData {
   public Entity TileEntity;
 }
 
+public struct Player1 : IComponentData {}
+
+public struct Player2 : IComponentData {}
+
 public struct PlayerIndex : ISharedComponentData {
   public int Value;
 }

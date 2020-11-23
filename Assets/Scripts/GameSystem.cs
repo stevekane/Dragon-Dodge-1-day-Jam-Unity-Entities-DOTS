@@ -4,6 +4,8 @@ using Unity.Physics.Systems;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Scenes;
+using Unity.Transforms;
+using Unity.Mathematics;
 using UnityEngine;
 using Ray = UnityEngine.Ray;
 using RaycastHit = Unity.Physics.RaycastHit;
@@ -53,16 +55,25 @@ public class GameSystem : SystemBase {
 
   public static void ReturnCardsToDeck(
   EntityManager entityManager,
+  Entity player1HandEntity,
+  Entity player2HandEntity,
   Entity spellCardDeckEntity,
   Entity elementCardDeckEntity,
   EntityQuery spellCardQuery,
   EntityQuery elementCardQuery) {
+    var player1Hand = entityManager.GetComponentData<Hand>(player1HandEntity);
+    var player2Hand = entityManager.GetComponentData<Hand>(player2HandEntity);
     var spellCards = spellCardQuery.ToEntityArray(Allocator.Temp);
     var elementCards = elementCardQuery.ToEntityArray(Allocator.Temp);
 
-    entityManager.RemoveComponent<PlayerIndex>(spellCards);
-    entityManager.RemoveComponent<PlayerIndex>(elementCards);
+    entityManager.GetBuffer<SpellCardEntry>(player1Hand.SpellCardsRootEntity).Clear();
+    entityManager.GetBuffer<SpellCardEntry>(player2Hand.SpellCardsRootEntity).Clear();
+    entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Clear();
     entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>().CopyFrom(spellCards);
+
+    entityManager.GetBuffer<ElementCardEntry>(player1Hand.ElementCardsRootEntity).Clear();
+    entityManager.GetBuffer<ElementCardEntry>(player2Hand.ElementCardsRootEntity).Clear();
+    entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Clear();
     entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Reinterpret<Entity>().CopyFrom(elementCards);
     spellCards.Dispose();
     elementCards.Dispose();
@@ -79,7 +90,7 @@ public class GameSystem : SystemBase {
       n--;  
       int k = rng.NextInt(n + 1);  
       T value = xs[k];  
-      xs[k] = xs[n];  
+      xs[k] = xs[n];
       xs[n] = value;  
     }  
   }
@@ -108,26 +119,44 @@ public class GameSystem : SystemBase {
 
   public static void DrawCardsForTurn(
   EntityManager entityManager,
+  Entity handEntity,
   Entity spellCardDeckEntity,
-  Entity elementCardDeckEntity,
-  int currentTurnPlayerIndex) {
-    var playerIndex = new PlayerIndex { Value = currentTurnPlayerIndex };
+  Entity elementCardDeckEntity) {
+    var hand = entityManager.GetComponentData<Hand>(handEntity);
+    var handSpellCardsEntity = hand.SpellCardsRootEntity;
+    var handElementCardsEntity = hand.ElementCardsRootEntity;
+    var handSpellCardsLocalToWorld = entityManager.GetComponentData<LocalToWorld>(handSpellCardsEntity);
+    var handElementCardsLocalToWorld = entityManager.GetComponentData<LocalToWorld>(handSpellCardsEntity);
     
-    if (TryDraw(entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>(), out Entity elementCardEntity)) {
-      entityManager.AddSharedComponentData(elementCardEntity, playerIndex);
+    if (TryDraw(entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>(), out Entity spellCardEntity)) {
+      var handSpellCardsBuffer = entityManager.GetBuffer<SpellCardEntry>(handSpellCardsEntity);
+      var index = handSpellCardsBuffer.Length;
+      var position = handSpellCardsLocalToWorld.Position + new float3(index * .5f, 0, 0);
+
+      entityManager.SetComponentData(spellCardEntity, new Translation { Value = position });
+      handSpellCardsBuffer.Reinterpret<Entity>().Add(spellCardDeckEntity);
     }
-    if (TryDraw(entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Reinterpret<Entity>(), out Entity spellCardEntity)) {
-      entityManager.AddSharedComponentData(spellCardEntity, playerIndex);
+    if (TryDraw(entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Reinterpret<Entity>(), out Entity elementCardEntity)) {
+      var handElementCardsBuffer = entityManager.GetBuffer<ElementCardEntry>(handElementCardsEntity);
+      var index = handElementCardsBuffer.Length;
+      var position = handElementCardsLocalToWorld.Position + new float3(index * .5f, 0, 0);
+
+      entityManager.SetComponentData(elementCardEntity, new Translation { Value = position });
+      handElementCardsBuffer.Reinterpret<Entity>().Add(elementCardDeckEntity);
     }
   }
 
-  public static bool AllScenesLoaded(NativeArray<Entity> sceneEntities, SceneSystem sceneSystem) {
-    var allLoaded = true;
-
-    for (var i = 0; i < sceneEntities.Length; i++) {
-      allLoaded = allLoaded && sceneSystem.IsSceneLoaded(sceneEntities[i]);
+  public static bool AllScenesLoaded(
+  EntityQuery LoadingSubScenesQuery,
+  SceneSystem sceneSystem) {
+    using (var sceneEntities = LoadingSubScenesQuery.ToEntityArray(Allocator.Temp)) {
+      for (var i = 0; i < sceneEntities.Length; i++) {
+        if (!sceneSystem.IsSceneLoaded(sceneEntities[i])) {
+          return false;
+        }
+      }
+      return true;
     }
-    return allLoaded;
   }
 
   protected override void OnCreate() {
@@ -140,15 +169,16 @@ public class GameSystem : SystemBase {
     EntityManager.CreateEntity(typeof(Game));
     EntityManager.CreateEntity(typeof(ElementCardDeck), typeof(ElementCardEntry));
     EntityManager.CreateEntity(typeof(SpellCardDeck), typeof(SpellCardEntry));
-    RequireSingletonForUpdate<Game>();
-    RequireSingletonForUpdate<SpellCardDeck>();
-    RequireSingletonForUpdate<ElementCardDeck>();
+    RequireSingletonForUpdate<Player1>();
+    RequireSingletonForUpdate<Player2>();
   }
 
   protected override void OnUpdate() {
     var sceneSystem = SceneSystem;
     var elementCardDeckEntity = GetSingletonEntity<ElementCardDeck>();
     var spellCardDeckEntity = GetSingletonEntity<SpellCardDeck>();
+    var player1HandEntity = GetSingletonEntity<Player1>();
+    var player2HandEntity = GetSingletonEntity<Player2>();
     var tileFromEntity = GetComponentDataFromEntity<Tile>(isReadOnly: true);
     var collisionWorld = BuildPhysicsWorld.PhysicsWorld.CollisionWorld;
     var mouseDown = Input.GetMouseButtonDown(0);
@@ -158,33 +188,28 @@ public class GameSystem : SystemBase {
     .ForEach((ref Game game) => {
       switch (game.GameState) {
         case GameState.Loading: {
-          var loadingSubSceneEntities = LoadingSubSceneQuery.ToEntityArray(Allocator.Temp);
-
-          if (AllScenesLoaded(loadingSubSceneEntities, sceneSystem)) {
+          if (AllScenesLoaded(LoadingSubSceneQuery, sceneSystem)) {
             game.GameState = GameState.Ready;
           }
-          loadingSubSceneEntities.Dispose();
         }
         break;
 
         case GameState.Ready: {
-          ReturnCardsToDeck(EntityManager, spellCardDeckEntity, elementCardDeckEntity, SpellCardQuery, ElementCardQuery);
+          var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
+
+          ReturnCardsToDeck(EntityManager, player1HandEntity, player2HandEntity, spellCardDeckEntity, elementCardDeckEntity, SpellCardQuery, ElementCardQuery);
           ShuffleCardsInDeck(EntityManager, spellCardDeckEntity, elementCardDeckEntity, 1);
-          DrawCardsForTurn(EntityManager, spellCardDeckEntity, elementCardDeckEntity, game.CurrentTurnPlayerIndex);
-          // When a player draws cards, they need to actually store them in their hand in some order
-          // The cards need to have a physical position that is derived from the location of the hands
-          // in world space
-          // This means I need to create singletons for PlayerXSpellCards, PlayerXElementCards, PlayerXTiles, PlayerX Pass Button
-          // When a player draws a card, it should get added to their hand AND placed in physical space according to its
-          // order in the hand
+          DrawCardsForTurn(EntityManager, activeHandEntity, spellCardDeckEntity, elementCardDeckEntity);
           game.GameState = GameState.TakingTurn;
         }
         break;
 
         case GameState.TakingTurn: {
           if (mouseDown && TryPick(tileFromEntity, collisionWorld, screenRay, out RaycastHit hit)) {
+            var activeHandEntity = (game.CurrentTurnPlayerIndex + 1) % 2 == 0 ? player1HandEntity : player2HandEntity;
+
             game.CurrentTurnPlayerIndex = game.CurrentTurnPlayerIndex == 0 ? 1 : 0;
-            DrawCardsForTurn(EntityManager, spellCardDeckEntity, elementCardDeckEntity, game.CurrentTurnPlayerIndex);
+            DrawCardsForTurn(EntityManager, activeHandEntity, spellCardDeckEntity, elementCardDeckEntity);
             game.GameState = GameState.TakingTurn;
           }
         }

@@ -60,7 +60,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3312626781766048550}
   m_Layer: 0
-  m_Name: Team 1 Spell Cards
+  m_Name: Spell Cards
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -90,7 +90,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3312626781900225075}
   m_Layer: 0
-  m_Name: Team 1 Tiles
+  m_Name: Tiles
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -120,7 +120,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3312626781991649138}
   m_Layer: 0
-  m_Name: Team 1 Element Cards
+  m_Name: Element Cards
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
