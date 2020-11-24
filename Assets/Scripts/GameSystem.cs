@@ -136,17 +136,24 @@ public class GameSystem : SystemBase {
       var handSpellCardsBuffer = entityManager.GetBuffer<SpellCardEntry>(handSpellCardsEntity);
       var index = handSpellCardsBuffer.Length;
 
-      UnityEngine.Debug.Log($"SpellCardEntity {spellCardEntity}");
-      entityManager.SetComponentData(spellCardEntity, new Parent { Value = handSpellCardsEntity });
-      entityManager.SetComponentData(spellCardEntity, new Translation { Value = new float3(index * CARD_OFFSET, 0, 0) });
+      entityManager.SetComponentData(spellCardEntity, new Rotation { 
+        Value = handSpellCardsLocalToWorld.Rotation 
+      });
+      entityManager.SetComponentData(spellCardEntity, new Translation { 
+        Value = handSpellCardsLocalToWorld.Position + new float3(index * CARD_OFFSET, 0, 0) 
+      });
       handSpellCardsBuffer.Reinterpret<Entity>().Add(spellCardEntity);
     }
     if (TryDraw(elementCardDeckBuffer, out Entity elementCardEntity)) {
       var handElementCardsBuffer = entityManager.GetBuffer<ElementCardEntry>(handElementCardsEntity);
       var index = handElementCardsBuffer.Length;
 
-      entityManager.SetComponentData(elementCardEntity, new Parent { Value = handElementCardsEntity });
-      entityManager.SetComponentData(elementCardEntity, new Translation { Value = new float3(index * CARD_OFFSET, 0, 0) });
+      entityManager.SetComponentData(elementCardEntity, new Rotation { 
+        Value = handElementCardsLocalToWorld.Rotation 
+      });
+      entityManager.SetComponentData(elementCardEntity, new Translation { 
+        Value = handElementCardsLocalToWorld.Position + new float3(index * CARD_OFFSET, 0, 0) 
+      });
       handElementCardsBuffer.Reinterpret<Entity>().Add(elementCardEntity);
     }
   }
@@ -185,6 +192,8 @@ public class GameSystem : SystemBase {
     var player1HandEntity = GetSingletonEntity<Player1>();
     var player2HandEntity = GetSingletonEntity<Player2>();
     var tileFromEntity = GetComponentDataFromEntity<Tile>(isReadOnly: true);
+    var spellCardFromEntity = GetComponentDataFromEntity<SpellCard>(isReadOnly: true);
+    var elementCardFromEntity = GetComponentDataFromEntity<SpellCard>(isReadOnly: true);
     var collisionWorld = BuildPhysicsWorld.PhysicsWorld.CollisionWorld;
     var mouseDown = Input.GetMouseButtonDown(0);
     var screenRay = MainCamera.ScreenPointToRay(Input.mousePosition);
@@ -210,6 +219,43 @@ public class GameSystem : SystemBase {
         break;
 
         case GameState.TakingTurn: {
+          switch (game.ActionState) {
+            case ActionState.Base: {
+              // if (mouseDown && TryPick<SpellCard>(spellCardFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
+              //   var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
+              //   var activeHand = GetComponent<Hand>(activeHandEntity);
+              //   var spellCardEntitiesInHand = GetBuffer<SpellCardEntry>(activeHand.SpellCardsRootEntity).Reinterpret<Entity>();
+              //   var selected = GetComponent<Selected>(raycastHit.Entity);
+              //   
+              //   if (spellCardEntitiesInHand.Contains(raycastHit.Entity) && selected.Value == false) {
+              //     Debug.Log("You clicked a spell card in your hand!");
+              //     selected.Value = true;
+              //     game.ActionState = ActionState.RotateCardSelected;
+              //   }
+              // }
+            }
+            break;
+
+            case ActionState.RotateCardSelected: {
+
+            }
+            break;
+
+            case ActionState.BoardTileToRotateSelected: {
+
+            }
+            break;
+
+            case ActionState.CardinalRotationSelected: {
+
+            }
+            break;
+
+            case ActionState.PlayingRotationAction: {
+
+            }
+            break;
+          }
           if (mouseDown && TryPick(tileFromEntity, collisionWorld, screenRay, out RaycastHit hit)) {
             var nextTurnPlayerIndex = (game.CurrentTurnPlayerIndex + 1) % 2;
             var activeHandEntity = nextTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;

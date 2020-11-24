@@ -35,7 +35,7 @@ public enum ActionState {
   Base,
   RotateCardSelected,
   BoardTileToRotateSelected,
-  RotationSelected,
+  CardinalRotationSelected,
   PlayingRotationAction
 }
 
@@ -55,6 +55,10 @@ public struct SelectTilePosition : IComponentData {
 
 public struct SelectCardinalRotation : IComponentData {
   public CardinalRotation Value;
+}
+
+public struct Selected : IComponentData {
+  public bool Value;
 }
 
 public struct ElementCard : IComponentData {
@@ -85,7 +89,7 @@ public struct Player1 : IComponentData {}
 
 public struct Player2 : IComponentData {}
 
-public struct PlayerIndex : ISharedComponentData {
+public struct PlayerIndex : IComponentData {
   public int Value;
 }
 
@@ -135,5 +139,6 @@ public struct Board : IComponentData {
 
 public struct Game : IComponentData {
   public GameState GameState;
+  public ActionState ActionState;
   public int CurrentTurnPlayerIndex;
 }

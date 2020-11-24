@@ -12,6 +12,6 @@ public class WizardAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
   public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem) {
     dstManager.AddComponent<Wizard>(entity);
     dstManager.AddComponentData(entity, TilePosition.FromWorldPosition(transform.position));
-    dstManager.AddSharedComponentData(entity, new PlayerIndex { Value = PlayerIndex  });
+    dstManager.AddComponentData(entity, new PlayerIndex { Value = PlayerIndex % 2 });
   }
 }

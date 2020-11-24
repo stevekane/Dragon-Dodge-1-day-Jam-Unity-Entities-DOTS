@@ -110,7 +110,7 @@ public class BoardRenderingSystem : SystemBase {
 
     Entities
     .WithName("Render_Wizard_On_Board")
-    .ForEach((Entity e, RenderWizardInstance renderWizard, in TilePosition tilePosition, in PlayerIndex playerIndex, in Rotation rotation) => {
+    .ForEach((Entity e, RenderWizardInstance renderWizard, in PlayerIndex playerIndex, in TilePosition tilePosition, in Rotation rotation) => {
       renderWizard.Instance.GetComponent<RenderWizard>().SetMaterialForPlayerIndex(renderGameObjects.Team1Material, renderGameObjects.Team2Material, playerIndex.Value);
       renderWizard.Instance.transform.SetPositionAndRotation(tilePosition.WorldPosition, rotation.Value);
     })
