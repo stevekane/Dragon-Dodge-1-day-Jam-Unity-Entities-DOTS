@@ -122,28 +122,32 @@ public class GameSystem : SystemBase {
   Entity handEntity,
   Entity spellCardDeckEntity,
   Entity elementCardDeckEntity) {
+    const float CARD_OFFSET = .5f;
+
     var hand = entityManager.GetComponentData<Hand>(handEntity);
     var handSpellCardsEntity = hand.SpellCardsRootEntity;
     var handElementCardsEntity = hand.ElementCardsRootEntity;
     var handSpellCardsLocalToWorld = entityManager.GetComponentData<LocalToWorld>(handSpellCardsEntity);
     var handElementCardsLocalToWorld = entityManager.GetComponentData<LocalToWorld>(handElementCardsEntity);
+    var spellCardDeckBuffer = entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>();
+    var elementCardDeckBuffer = entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Reinterpret<Entity>();
     
-    // TODO: OCD... but maybe could lift the spellCardDeckBuffer and elementCardDeckBuffer into locals now...
-    if (TryDraw(entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>(), out Entity spellCardEntity)) {
+    if (TryDraw(spellCardDeckBuffer, out Entity spellCardEntity)) {
       var handSpellCardsBuffer = entityManager.GetBuffer<SpellCardEntry>(handSpellCardsEntity);
       var index = handSpellCardsBuffer.Length;
-      var position = handSpellCardsLocalToWorld.Position + new float3(index * .5f, 0, 0);
 
-      entityManager.SetComponentData(spellCardEntity, new Translation { Value = position });
-      handSpellCardsBuffer.Reinterpret<Entity>().Add(spellCardDeckEntity);
+      UnityEngine.Debug.Log($"SpellCardEntity {spellCardEntity}");
+      entityManager.SetComponentData(spellCardEntity, new Parent { Value = handSpellCardsEntity });
+      entityManager.SetComponentData(spellCardEntity, new Translation { Value = new float3(index * CARD_OFFSET, 0, 0) });
+      handSpellCardsBuffer.Reinterpret<Entity>().Add(spellCardEntity);
     }
-    if (TryDraw(entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Reinterpret<Entity>(), out Entity elementCardEntity)) {
+    if (TryDraw(elementCardDeckBuffer, out Entity elementCardEntity)) {
       var handElementCardsBuffer = entityManager.GetBuffer<ElementCardEntry>(handElementCardsEntity);
       var index = handElementCardsBuffer.Length;
-      var position = handElementCardsLocalToWorld.Position + new float3(index * .5f, 0, 0);
 
-      entityManager.SetComponentData(elementCardEntity, new Translation { Value = position });
-      handElementCardsBuffer.Reinterpret<Entity>().Add(elementCardDeckEntity);
+      entityManager.SetComponentData(elementCardEntity, new Parent { Value = handElementCardsEntity });
+      entityManager.SetComponentData(elementCardEntity, new Translation { Value = new float3(index * CARD_OFFSET, 0, 0) });
+      handElementCardsBuffer.Reinterpret<Entity>().Add(elementCardEntity);
     }
   }
 
