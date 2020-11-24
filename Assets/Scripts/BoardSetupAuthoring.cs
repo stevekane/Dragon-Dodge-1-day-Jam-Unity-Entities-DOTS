@@ -1,8 +1,18 @@
-﻿using Unity.Entities;
+﻿using Unity.Collections;
+using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-public class BoardAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
+public struct BoardSetupBlobAsset {
+  public int2 Dimensions;
+  public BlobArray<int2> TilePositions;
+}
+
+public struct BoardSetup : IComponentData {
+  public BlobAssetReference<BoardSetupBlobAsset> Reference;
+}
+
+public class BoardSetupAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
   public int2 Dimensions;
   public int2[] TilePositions = new int2[0];
 
@@ -29,7 +39,6 @@ public class BoardAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
 
     Gizmos.color = Color.grey;
     Gizmos.DrawWireCube(transform.position, new Vector3(Dimensions.x, 0, Dimensions.y));
-    
     foreach (var tileposition in TilePositions) {
       Gizmos.color = InBounds(tileposition, Dimensions) ? Color.green : Color.red;
       Gizmos.DrawWireCube(new Vector3(tileposition.x, 0, tileposition.y), new Vector3(TILE_SCALE, 0, TILE_SCALE));
@@ -37,6 +46,19 @@ public class BoardAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
   }
 
   public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem) {
-    dstManager.AddComponentData(entity, new Board { Dimensions = Dimensions });
+    using (var builder = new BlobBuilder(Allocator.Temp)) {
+      ref var root = ref builder.ConstructRoot<BoardSetupBlobAsset>();
+      var tilePositions = builder.Allocate(ref root.TilePositions, TilePositions.Length);
+
+      root.Dimensions = Dimensions;
+      for (int i = 0; i < TilePositions.Length; i++) {
+        tilePositions[i] = TilePositions[i];
+      }
+      var reference = builder.CreateBlobAssetReference<BoardSetupBlobAsset>(Allocator.Persistent);
+
+      dstManager.AddComponentData(entity, new BoardSetup { 
+        Reference = reference
+      });
+    }
   }
 }

@@ -137,8 +137,10 @@ public struct Wizard : IComponentData {}
 
 public struct Dragon : IComponentData {}
 
-public struct Board : IComponentData {
-  public int2 Dimensions;
+public struct Board : IComponentData {}
+
+public struct BoardEntry : IBufferElementData {
+  public Entity Entity;
 }
 
 public struct Game : IComponentData {

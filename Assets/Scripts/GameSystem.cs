@@ -168,6 +168,7 @@ public class GameSystem : SystemBase {
     EntityManager.CreateEntity(typeof(Game));
     EntityManager.CreateEntity(typeof(ElementCardDeck), typeof(ElementCardEntry));
     EntityManager.CreateEntity(typeof(SpellCardDeck), typeof(SpellCardEntry));
+    EntityManager.CreateEntity(typeof(Board), typeof(BoardEntry));
     RequireSingletonForUpdate<Player1>();
     RequireSingletonForUpdate<Player2>();
   }
