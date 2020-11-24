@@ -9,7 +9,6 @@ using Unity.Mathematics;
 using UnityEngine;
 using Ray = UnityEngine.Ray;
 using RaycastHit = Unity.Physics.RaycastHit;
-using Random = Unity.Mathematics.Random;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(FixedStepSimulationSystemGroup))]
@@ -17,6 +16,7 @@ public class GameSystem : SystemBase {
   Camera MainCamera;
 
   EntityQuery LoadingSubSceneQuery;
+  EntityQuery TileQuery;
   EntityQuery SpellCardQuery;
   EntityQuery ElementCardQuery;
 
@@ -39,19 +39,21 @@ public class GameSystem : SystemBase {
     var raycastHits = new NativeList<RaycastHit>(Allocator.Temp);
 
     if (collisionWorld.CastRay(raycastInput, ref raycastHits)) {
-      for (var i = raycastHits.Length - 1; i >= 0; i--) {
+      for (var i = 0; i < raycastHits.Length; i++) {
         if (componentDataFromEntity.HasComponent(raycastHits[i].Entity)) {
           raycastHit = raycastHits[i];
           return true;
         }
       }
-      raycastHit = default(RaycastHit);
-      return false;
-    } else {
-      raycastHit = default(RaycastHit);
-      return false;
     }
+    raycastHit = default(RaycastHit);
+    return false;
   }
+
+  // You should be able to check if a tile is on the board and where it is
+  // You should be able to query for all empty spaces on the board
+  // You should be able to query for all tiles nearby a specified tile
+  // You should be able to query for all empty spaces nearby a specified tile
 
   public static void ReturnCardsToDeck(
   EntityManager entityManager,
@@ -79,29 +81,13 @@ public class GameSystem : SystemBase {
     elementCards.Dispose();
   }
 
-  public static void Shuffle<T>(
-  DynamicBuffer<T> xs, 
-  in uint seed) 
-  where T : struct {  
-    var rng = new Random(seed);
-    var n = xs.Length;  
-
-    while (n > 1) {
-      n--;  
-      int k = rng.NextInt(n + 1);  
-      T value = xs[k];  
-      xs[k] = xs[n];
-      xs[n] = value;  
-    }  
-  }
-
   public static void ShuffleCardsInDeck(
   EntityManager entityManager,
   Entity spellCardDeckEntity,
   Entity elementCardDeckEntity,
   uint seed) {
-    Shuffle(entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity), seed);
-    Shuffle(entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity), seed);
+    entityManager.GetBuffer<SpellCardEntry>(spellCardDeckEntity).Shuffle(seed);
+    entityManager.GetBuffer<ElementCardEntry>(elementCardDeckEntity).Shuffle(seed);
   }
 
   public static bool TryDraw(
@@ -174,6 +160,7 @@ public class GameSystem : SystemBase {
   protected override void OnCreate() {
     MainCamera = Camera.main;
     LoadingSubSceneQuery = EntityManager.CreateEntityQuery(typeof(SceneReference));
+    TileQuery = EntityManager.CreateEntityQuery(typeof(Tile));
     SpellCardQuery = EntityManager.CreateEntityQuery(typeof(SpellCard));
     ElementCardQuery = EntityManager.CreateEntityQuery(typeof(ElementCard));
     SceneSystem = World.GetExistingSystem<SceneSystem>();
@@ -189,6 +176,7 @@ public class GameSystem : SystemBase {
     var sceneSystem = SceneSystem;
     var elementCardDeckEntity = GetSingletonEntity<ElementCardDeck>();
     var spellCardDeckEntity = GetSingletonEntity<SpellCardDeck>();
+    var boardEntity = GetSingleton<Board>();
     var player1HandEntity = GetSingletonEntity<Player1>();
     var player2HandEntity = GetSingletonEntity<Player2>();
     var tileFromEntity = GetComponentDataFromEntity<Tile>(isReadOnly: true);
@@ -211,6 +199,13 @@ public class GameSystem : SystemBase {
         case GameState.Ready: {
           var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
 
+          // There are a bunch of tiles that should be created when the game is started.
+          // These tiles should have specific combinations of elements which are always the same
+          // The board is then populated by placing these tiles into the buffer which represents
+          // the 2-dimensional array containing all tiles and empty spaces
+          // an empty space is denoted by an entry in this array that points at a Empty Tile entity
+          // while a entry that is a tile will point to a Tile entity
+          // PopulateBoard(EntityManager, TileQuery)
           ReturnCardsToDeck(EntityManager, player1HandEntity, player2HandEntity, spellCardDeckEntity, elementCardDeckEntity, SpellCardQuery, ElementCardQuery);
           ShuffleCardsInDeck(EntityManager, spellCardDeckEntity, elementCardDeckEntity, 1);
           DrawCardsForTurn(EntityManager, activeHandEntity, spellCardDeckEntity, elementCardDeckEntity);
@@ -221,48 +216,73 @@ public class GameSystem : SystemBase {
         case GameState.TakingTurn: {
           switch (game.ActionState) {
             case ActionState.Base: {
-              // if (mouseDown && TryPick<SpellCard>(spellCardFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
-              //   var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
-              //   var activeHand = GetComponent<Hand>(activeHandEntity);
-              //   var spellCardEntitiesInHand = GetBuffer<SpellCardEntry>(activeHand.SpellCardsRootEntity).Reinterpret<Entity>();
-              //   var selected = GetComponent<Selected>(raycastHit.Entity);
-              //   
-              //   if (spellCardEntitiesInHand.Contains(raycastHit.Entity) && selected.Value == false) {
-              //     Debug.Log("You clicked a spell card in your hand!");
-              //     selected.Value = true;
-              //     game.ActionState = ActionState.RotateCardSelected;
-              //   }
-              // }
+              if (mouseDown && TryPick<SpellCard>(spellCardFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
+                var spellCardEntity = raycastHit.Entity;
+                var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
+                var activeHand = GetComponent<Hand>(activeHandEntity);
+                var activeAction = GetComponent<Action>(activeHand.ActionEntity);
+                var spellCardEntitiesInHand = GetBuffer<SpellCardEntry>(activeHand.SpellCardsRootEntity).Reinterpret<Entity>();
+                
+                // TODO: you must check what type of card this actually is...
+                if (spellCardEntitiesInHand.Contains(spellCardEntity)) {
+                  Debug.Log("You clicked a spell card in your hand!");
+                  activeAction.SelectedSpellCardEntity = spellCardEntity;
+                  SetComponent<Action>(activeHand.ActionEntity, activeAction);
+                  game.ActionState = ActionState.RotateCardSelected;
+                }
+              }
             }
             break;
 
             case ActionState.RotateCardSelected: {
+              if (mouseDown && TryPick<Tile>(tileFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
+                var tileEntity = raycastHit.Entity;
+                var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
+                var activeHand = GetComponent<Hand>(activeHandEntity);
+                var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
+                if (/*OnBoard(raycastHit.Entity) &&*/ true) {
+                  Debug.Log($"You clicked a tile to rotate!");
+                  activeAction.SelectedTileEntity = tileEntity;
+                  SetComponent<Action>(activeHand.ActionEntity, activeAction);
+                  game.ActionState = ActionState.BoardTileToRotateSelected;
+                }
+              }
             }
             break;
 
             case ActionState.BoardTileToRotateSelected: {
+              if (mouseDown && TryPick<Tile>(tileFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
+                var tileEntity = raycastHit.Entity;
+                var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
+                var activeHand = GetComponent<Hand>(activeHandEntity);
+                var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
-            }
-            break;
-
-            case ActionState.CardinalRotationSelected: {
-
+                if (activeAction.SelectedTileEntity == tileEntity) {
+                  Debug.Log($"You chose a cardinal rotation!");
+                  activeAction.SelectedCardinalRotation = CardinalRotation.East; // TODO: obviously should be an actual rotation value...
+                  SetComponent<Action>(activeHand.ActionEntity, activeAction);
+                  game.ActionState = ActionState.PlayingRotationAction;
+                }
+              }
             }
             break;
 
             case ActionState.PlayingRotationAction: {
+              var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
+              var activeHand = GetComponent<Hand>(activeHandEntity);
+              var activeAction = GetComponent<Action>(activeHand.ActionEntity);
+              var tileRotation = GetComponent<TileRotation>(activeAction.SelectedTileEntity);
 
+              // TODO: remove selected card from hand
+              // TODO: insert selected card into the deck
+              // TODO: may be wise to flush the selected element cards buffer as well as part of wrapper method for resetting action?
+              SetComponent(activeAction.SelectedTileEntity, new TileRotation { Value = activeAction.SelectedCardinalRotation });
+              SetComponent(activeHand.ActionEntity, default(Action));
+              Debug.Log($"Playing the sick rotate!");
+              game.ActionState = ActionState.Base;
             }
             break;
-          }
-          if (mouseDown && TryPick(tileFromEntity, collisionWorld, screenRay, out RaycastHit hit)) {
-            var nextTurnPlayerIndex = (game.CurrentTurnPlayerIndex + 1) % 2;
-            var activeHandEntity = nextTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
-
-            game.CurrentTurnPlayerIndex = nextTurnPlayerIndex;
-            DrawCardsForTurn(EntityManager, activeHandEntity, spellCardDeckEntity, elementCardDeckEntity);
-            game.GameState = GameState.TakingTurn;
           }
         }
         break;

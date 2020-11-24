@@ -35,7 +35,6 @@ public enum ActionState {
   Base,
   RotateCardSelected,
   BoardTileToRotateSelected,
-  CardinalRotationSelected,
   PlayingRotationAction
 }
 
@@ -55,10 +54,6 @@ public struct SelectTilePosition : IComponentData {
 
 public struct SelectCardinalRotation : IComponentData {
   public CardinalRotation Value;
-}
-
-public struct Selected : IComponentData {
-  public bool Value;
 }
 
 public struct ElementCard : IComponentData {
@@ -97,6 +92,13 @@ public struct Hand : IComponentData {
   public Entity TilesRootEntity;
   public Entity SpellCardsRootEntity;
   public Entity ElementCardsRootEntity;
+  public Entity ActionEntity;
+}
+
+public struct Action : IComponentData {
+  public CardinalRotation SelectedCardinalRotation;
+  public Entity SelectedTileEntity;
+  public Entity SelectedSpellCardEntity;
 }
 
 [Serializable]
@@ -106,6 +108,8 @@ public struct Tile : IComponentData {
   public Element South;
   public Element West;
 }
+
+public struct EmptySpace : IComponentData {}
 
 public struct TilePosition : IComponentData {
   public int2 Value;
@@ -120,12 +124,12 @@ public struct TilePosition : IComponentData {
 }
 
 public struct TileRotation : IComponentData {
-  const float QUARTER_ROTATION_RADIANS = PI / 2f;
+  const float QUARTER_ROTATION_DEGREES = 90f;
 
   public CardinalRotation Value;
 
   public Quaternion WorldRotation {
-    get { return Quaternion.AngleAxis((float)Value * QUARTER_ROTATION_RADIANS, Vector3.up); }
+    get { return Quaternion.AngleAxis((float)Value * QUARTER_ROTATION_DEGREES, Vector3.up); }
   }
 }
 

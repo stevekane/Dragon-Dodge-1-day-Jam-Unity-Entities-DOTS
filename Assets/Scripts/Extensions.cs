@@ -1,5 +1,6 @@
 ﻿using System;
 using Unity.Entities;
+using Random = Unity.Mathematics.Random;
 
 public static class Extensions {
   public static bool Contains<T>(
@@ -12,5 +13,21 @@ public static class Extensions {
       }
     }
     return false;
+  }
+
+  public static void Shuffle<T>(
+  this DynamicBuffer<T> xs, 
+  in uint seed) 
+  where T : struct {  
+    var rng = new Random(seed);
+    var n = xs.Length;  
+
+    while (n > 1) {
+      n--;  
+      int k = rng.NextInt(n + 1);  
+      T value = xs[k];  
+      xs[k] = xs[n];
+      xs[n] = value;  
+    }  
   }
 }
