@@ -2,7 +2,6 @@
 using UnityEngine;
 
 public class TileAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
-  [Header("Elements")]
   public Tile Tile;
 
   public Color ColorForElement(in Element element) {

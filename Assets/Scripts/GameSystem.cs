@@ -50,10 +50,48 @@ public class GameSystem : SystemBase {
     return false;
   }
 
+  // TODO: QUERIES
   // You should be able to check if a tile is on the board and where it is
   // You should be able to query for all empty spaces on the board
   // You should be able to query for all tiles nearby a specified tile
   // You should be able to query for all empty spaces nearby a specified tile
+
+  public static int To1DIndex(
+  in int2 v, 
+  in int2 dimensions) {
+    var min = -(dimensions - new int2(1,1)) / 2;
+    var p = v - min;
+
+    return p.x * dimensions.y + p.y;
+  }
+
+  public static void PlaceTilesOnBoard(    
+  EntityManager entityManager,
+  EntityQuery tileQuery,
+  Entity boardSetupEntity,
+  Entity boardEntity) {
+    using (var tileEntities = tileQuery.ToEntityArray(Allocator.Temp)) {
+      var boardConfiguration = entityManager.GetComponentData<BoardSetup>(boardSetupEntity);
+      ref var boardDimensions = ref boardConfiguration.Reference.Value.Dimensions;
+      ref var boardTilePositions = ref boardConfiguration.Reference.Value.TilePositions;
+      var boardBuffer = entityManager.GetBuffer<BoardEntry>(boardEntity);
+      var tileIndex = 0;
+
+      boardBuffer.Length = boardDimensions.x * boardDimensions.y;
+      for (int i = 0; i < boardTilePositions.Length; i++) {
+        var boardTilePosition = boardTilePositions[i];
+        var index = To1DIndex(boardTilePosition, boardDimensions);
+        var tilePosition = new TilePosition { Value = boardTilePosition };
+        var tileTranslation = new Translation { Value = tilePosition.WorldPosition };
+        var tileEntity = tileEntities[tileIndex];
+
+        boardBuffer[index] = new BoardEntry { Entity = tileEntity };
+        entityManager.SetComponentData(tileEntity, tileTranslation);
+        entityManager.SetComponentData(tileEntity, tilePosition);
+        tileIndex++;
+      }
+    }
+  }
 
   public static void ReturnCardsToDeck(
   EntityManager entityManager,
@@ -169,17 +207,12 @@ public class GameSystem : SystemBase {
     EntityManager.CreateEntity(typeof(ElementCardDeck), typeof(ElementCardEntry));
     EntityManager.CreateEntity(typeof(SpellCardDeck), typeof(SpellCardEntry));
     EntityManager.CreateEntity(typeof(Board), typeof(BoardEntry));
-    RequireSingletonForUpdate<Player1>();
-    RequireSingletonForUpdate<Player2>();
   }
 
   protected override void OnUpdate() {
     var sceneSystem = SceneSystem;
     var elementCardDeckEntity = GetSingletonEntity<ElementCardDeck>();
     var spellCardDeckEntity = GetSingletonEntity<SpellCardDeck>();
-    var boardEntity = GetSingleton<Board>();
-    var player1HandEntity = GetSingletonEntity<Player1>();
-    var player2HandEntity = GetSingletonEntity<Player2>();
     var tileFromEntity = GetComponentDataFromEntity<Tile>(isReadOnly: true);
     var spellCardFromEntity = GetComponentDataFromEntity<SpellCard>(isReadOnly: true);
     var elementCardFromEntity = GetComponentDataFromEntity<SpellCard>(isReadOnly: true);
@@ -198,15 +231,13 @@ public class GameSystem : SystemBase {
         break;
 
         case GameState.Ready: {
+          var player1HandEntity = GetSingletonEntity<Player1>();
+          var player2HandEntity = GetSingletonEntity<Player2>();
+          var boardEntity = GetSingletonEntity<Board>();
+          var boardSetupEntity = GetSingletonEntity<BoardSetup>();
           var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
 
-          // There are a bunch of tiles that should be created when the game is started.
-          // These tiles should have specific combinations of elements which are always the same
-          // The board is then populated by placing these tiles into the buffer which represents
-          // the 2-dimensional array containing all tiles and empty spaces
-          // an empty space is denoted by an entry in this array that points at a Empty Tile entity
-          // while a entry that is a tile will point to a Tile entity
-          // PopulateBoard(EntityManager, TileQuery)
+          PlaceTilesOnBoard(EntityManager, TileQuery, boardSetupEntity, boardEntity);
           ReturnCardsToDeck(EntityManager, player1HandEntity, player2HandEntity, spellCardDeckEntity, elementCardDeckEntity, SpellCardQuery, ElementCardQuery);
           ShuffleCardsInDeck(EntityManager, spellCardDeckEntity, elementCardDeckEntity, 1);
           DrawCardsForTurn(EntityManager, activeHandEntity, spellCardDeckEntity, elementCardDeckEntity);
@@ -215,11 +246,16 @@ public class GameSystem : SystemBase {
         break;
 
         case GameState.TakingTurn: {
+          var player1HandEntity = GetSingletonEntity<Player1>();
+          var player2HandEntity = GetSingletonEntity<Player2>();
+          var boardEntity = GetSingletonEntity<Board>();
+          var boardSetupEntity = GetSingletonEntity<BoardSetup>();
+          var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
+
           switch (game.ActionState) {
             case ActionState.Base: {
               if (mouseDown && TryPick<SpellCard>(spellCardFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
                 var spellCardEntity = raycastHit.Entity;
-                var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
                 var spellCardEntitiesInHand = GetBuffer<SpellCardEntry>(activeHand.SpellCardsRootEntity).Reinterpret<Entity>();
@@ -238,7 +274,6 @@ public class GameSystem : SystemBase {
             case ActionState.RotateCardSelected: {
               if (mouseDown && TryPick<Tile>(tileFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
                 var tileEntity = raycastHit.Entity;
-                var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
@@ -255,7 +290,6 @@ public class GameSystem : SystemBase {
             case ActionState.BoardTileToRotateSelected: {
               if (mouseDown && TryPick<Tile>(tileFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
                 var tileEntity = raycastHit.Entity;
-                var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
@@ -270,7 +304,6 @@ public class GameSystem : SystemBase {
             break;
 
             case ActionState.PlayingRotationAction: {
-              var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
               var activeHand = GetComponent<Hand>(activeHandEntity);
               var activeAction = GetComponent<Action>(activeHand.ActionEntity);
               var tileRotation = GetComponent<TileRotation>(activeAction.SelectedTileEntity);
