@@ -51,8 +51,20 @@ public static class Extensions {
     return new float3(tp.x, 0, tp.y);
   }
 
+  public static int2 ToBoardPosition(
+  this float3 v) {
+    return new int2(Mathf.RoundToInt(v.x), Mathf.RoundToInt(v.z));
+  }
+
   public static quaternion ToWorldRotation(
   this CardinalRotation cardinalRotation) {
     return Quaternion.AngleAxis(90 * (int)cardinalRotation, Vector3.up);
+  }
+
+  public static bool InBounds(
+  this int2 v,
+  in int2 min,
+  in int2 max) {
+    return v.x >= min.x && v.y >= min.y && v.x <= max.x && v.y <= max.y;
   }
 }

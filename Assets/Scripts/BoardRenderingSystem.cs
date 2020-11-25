@@ -3,16 +3,8 @@ using Unity.Jobs;
 using Unity.Transforms;
 using UnityEngine;
 
-public class RenderDragonInstance : ISystemStateComponentData {
-  public GameObject Instance; 
-}
-
-public class RenderWizardInstance : ISystemStateComponentData {
-  public GameObject Instance; 
-}
-
-public class RenderTileInstance : ISystemStateComponentData {
-  public GameObject Instance;
+public class ManagedRenderer : ISystemStateComponentData {
+  public GameObject Value;
 }
 
 [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -22,69 +14,47 @@ public class BoardRendererLifeCycleSystem : SystemBase {
     var renderGameObjects = gameConfiguration.RenderGameObjects; 
 
     Entities
-    .WithName("Add_Render_Tile_Instance")
-    .WithNone<RenderTileInstance>()
+    .WithNone<ManagedRenderer>()
     .WithAll<Tile>()
     .ForEach((Entity e) => {
-      EntityManager.AddComponentData(e, new RenderTileInstance { Instance = GameObject.Instantiate(renderGameObjects.RenderBoardTile) });
+      EntityManager.AddComponentData(e, new ManagedRenderer { 
+        Value = GameObject.Instantiate(renderGameObjects.RenderBoardTile) 
+      });
     })
     .WithStructuralChanges()
     .WithoutBurst()
     .Run();
 
     Entities
-    .WithName("Remove_Render_Tile_Instance")
-    .WithAll<RenderTileInstance>()
-    .WithNone<Tile>()
-    .ForEach((Entity e, RenderTileInstance instance) => {
-      GameObject.Destroy(instance.Instance);
-      EntityManager.RemoveComponent<RenderTileInstance>(e);
-    })
-    .WithStructuralChanges()
-    .WithoutBurst()
-    .Run();
-
-    Entities
-    .WithName("Add_Render_Wizard_Instance")
-    .WithNone<RenderWizardInstance>()
+    .WithNone<ManagedRenderer>()
     .WithAll<Wizard>()
     .ForEach((Entity e) => {
-      EntityManager.AddComponentData(e, new RenderWizardInstance { Instance = GameObject.Instantiate(renderGameObjects.RenderBoardWizard) });
+      EntityManager.AddComponentData(e, new ManagedRenderer { 
+        Value = GameObject.Instantiate(renderGameObjects.RenderBoardWizard) 
+      });
     })
     .WithStructuralChanges()
     .WithoutBurst()
     .Run();
 
     Entities
-    .WithName("Remove_Render_Wizard_Instance")
-    .WithAll<RenderWizardInstance>()
-    .WithNone<Wizard>()
-    .ForEach((Entity e, RenderWizardInstance instance) => {
-      GameObject.Destroy(instance.Instance);
-      EntityManager.RemoveComponent<RenderWizardInstance>(e);
-    })
-    .WithStructuralChanges()
-    .WithoutBurst()
-    .Run();
-
-    Entities
-    .WithName("Add_Render_Dragon_Instance")
-    .WithNone<RenderDragonInstance>()
+    .WithNone<ManagedRenderer>()
     .WithAll<Dragon>()
     .ForEach((Entity e) => {
-      EntityManager.AddComponentData(e, new RenderDragonInstance { Instance = GameObject.Instantiate(renderGameObjects.RenderBoardDragon) });
+      EntityManager.AddComponentData(e, new ManagedRenderer { 
+        Value = GameObject.Instantiate(renderGameObjects.RenderBoardDragon) 
+      });
     })
     .WithStructuralChanges()
     .WithoutBurst()
     .Run();
 
     Entities
-    .WithName("Remove_Render_Dragon_Instance")
-    .WithAll<RenderDragonInstance>()
-    .WithNone<Dragon>()
-    .ForEach((Entity e, RenderDragonInstance instance) => {
-      GameObject.Destroy(instance.Instance);
-      EntityManager.RemoveComponent<RenderDragonInstance>(e);
+    .WithAll<ManagedRenderer>()
+    .WithNone<Tile, Wizard, Dragon>()
+    .ForEach((Entity e, ManagedRenderer renderer) => {
+      GameObject.Destroy(renderer.Value);
+      EntityManager.RemoveComponent<ManagedRenderer>(e);
     })
     .WithStructuralChanges()
     .WithoutBurst()
@@ -104,15 +74,15 @@ public class BoardRenderingSystem : SystemBase {
     for (int i = 0; i < tileBuffer.Length; i++) {
       var boardTile = tileBuffer[i];
       var tile = entityManager.GetComponentData<Tile>(boardTile.Entity);
-      var renderTileInstance = entityManager.GetComponentObject<RenderTileInstance>(boardTile.Entity);
-      var renderTile = renderTileInstance.Instance.GetComponent<RenderTile>();
+      var renderer = entityManager.GetComponentObject<ManagedRenderer>(boardTile.Entity);
+      var renderTile = renderer.Value.GetComponent<RenderTile>();
       var position = boardTile.BoardPosition.ToWorldPosition();
       var rotation = boardTile.CardinalRotation.ToWorldRotation();
 
       entityManager.SetComponentData(boardTile.Entity, new Translation { Value = position });
       entityManager.SetComponentData(boardTile.Entity, new Rotation { Value = rotation });
       renderTile.SetElementalMaterials(renderGameObjects, tile);
-      renderTileInstance.Instance.transform.SetPositionAndRotation(position, rotation);
+      renderer.Value.transform.SetPositionAndRotation(position, rotation);
     }
   }
 
@@ -125,8 +95,8 @@ public class BoardRenderingSystem : SystemBase {
 
     for (var i = 0; i < player1WizardBuffer.Length; i++) {
       var boardWizard = player1WizardBuffer[i];
-      var renderWizardInstance = entityManager.GetComponentObject<RenderWizardInstance>(boardWizard.Entity);
-      var renderWizard = renderWizardInstance.Instance.GetComponent<RenderWizard>();
+      var renderer = entityManager.GetComponentObject<ManagedRenderer>(boardWizard.Entity);
+      var renderWizard = renderer.Value.GetComponent<RenderWizard>();
       var position = boardWizard.BoardPosition.ToWorldPosition();
       var rotation = Quaternion.identity;
 
@@ -138,8 +108,8 @@ public class BoardRenderingSystem : SystemBase {
 
     for (var i = 0; i < player2WizardBuffer.Length; i++) {
       var boardWizard = player2WizardBuffer[i];
-      var renderWizardInstance = entityManager.GetComponentObject<RenderWizardInstance>(boardWizard.Entity);
-      var renderWizard = renderWizardInstance.Instance.GetComponent<RenderWizard>();
+      var renderer = entityManager.GetComponentObject<ManagedRenderer>(boardWizard.Entity);
+      var renderWizard = renderer.Value.GetComponent<RenderWizard>();
       var position = boardWizard.BoardPosition.ToWorldPosition();
       var rotation = Quaternion.identity;
 
@@ -158,13 +128,13 @@ public class BoardRenderingSystem : SystemBase {
 
     for (var i = 0; i < dragonBuffer.Length; i++) {
       var boardDragon = dragonBuffer[i];
-      var renderDragonInstance = entityManager.GetComponentObject<RenderDragonInstance>(boardDragon.Entity);
+      var renderer = entityManager.GetComponentObject<ManagedRenderer>(boardDragon.Entity);
       var position = boardDragon.BoardPosition.ToWorldPosition();
       var rotation = Quaternion.identity;
 
       entityManager.SetComponentData(boardDragon.Entity, new Translation { Value = position });
       entityManager.SetComponentData(boardDragon.Entity, new Rotation { Value = rotation });
-      renderDragonInstance.Instance.transform.SetPositionAndRotation(position, rotation);
+      renderer.Value.transform.SetPositionAndRotation(position, rotation);
     }
   }
 

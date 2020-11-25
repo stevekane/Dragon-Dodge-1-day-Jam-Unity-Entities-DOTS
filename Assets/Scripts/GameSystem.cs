@@ -243,6 +243,14 @@ public class GameSystem : SystemBase {
     }
   }
 
+  public static bool TryGetBoardPositionFromWorldPosition(
+  in BoardRegion boardRegion,
+  in float3 worldPosition,
+  out int2 boardPosition) {
+    boardPosition = worldPosition.ToBoardPosition();
+    return boardPosition.InBounds(boardRegion.Min, boardRegion.Max);
+  }
+
   protected override void OnCreate() {
     MainCamera = Camera.main;
     LoadingSubSceneQuery = EntityManager.CreateEntityQuery(typeof(SceneReference));
@@ -306,6 +314,11 @@ public class GameSystem : SystemBase {
 
           switch (game.ActionState) {
             case ActionState.Base: {
+              if (TryPick<BoardRegion>(EntityManager, collisionWorld, screenRay, out RaycastHit hit)) {
+                var boardPosition = hit.Position.ToBoardPosition();
+
+                Debug.Log($"Hitting {boardPosition}");
+              }
               if (mouseDown && TryPick<SpellCard>(EntityManager, collisionWorld, screenRay, out RaycastHit raycastHit)) {
                 var spellCardEntity = raycastHit.Entity;
                 var activeHand = GetComponent<Hand>(activeHandEntity);
