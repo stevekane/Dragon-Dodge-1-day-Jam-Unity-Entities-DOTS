@@ -52,6 +52,23 @@ public class GameSystem : SystemBase {
     return false;
   }
 
+  public static bool TryGetBoardTileIndex(
+  EntityManager entityManager,
+  Entity boardEntity,
+  Entity tileEntity,
+  out int boardTileIndex) {
+    var boardTiles = entityManager.GetBuffer<BoardTileEntry>(boardEntity);
+
+    for (var i = 0; i < boardTiles.Length; i++) {
+      if (boardTiles[i].Entity == tileEntity) {
+        boardTileIndex = i;
+        return true;
+      }
+    }
+    boardTileIndex = -1;
+    return false;
+  }
+
   // TODO: QUERIES
   // You should be able to check if a tile is on the board and where it is
   // You should be able to query for all empty spaces on the board
@@ -299,9 +316,9 @@ public class GameSystem : SystemBase {
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
-                if (/*OnBoard(raycastHit.Entity) &&*/ true) {
+                if (TryGetBoardTileIndex(EntityManager, boardEntity, raycastHit.Entity, out int boardTileIndex)) {
                   Debug.Log($"You clicked a tile to rotate!");
-                  activeAction.SelectedTileEntity = tileEntity;
+                  activeAction.SelectedBoardTileIndex = boardTileIndex;
                   SetComponent<Action>(activeHand.ActionEntity, activeAction);
                   game.ActionState = ActionState.BoardTileToRotateSelected;
                 }
@@ -315,12 +332,10 @@ public class GameSystem : SystemBase {
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
-                if (activeAction.SelectedTileEntity == tileEntity) {
-                  Debug.Log($"You chose a cardinal rotation!");
-                  activeAction.SelectedCardinalRotation = CardinalRotation.East; // TODO: obviously should be an actual rotation value...
-                  SetComponent<Action>(activeHand.ActionEntity, activeAction);
-                  game.ActionState = ActionState.PlayingRotationAction;
-                }
+                Debug.Log($"You chose a cardinal rotation!");
+                activeAction.SelectedCardinalRotation = CardinalRotation.East; // TODO: obviously should be an actual rotation value...
+                SetComponent<Action>(activeHand.ActionEntity, activeAction);
+                game.ActionState = ActionState.PlayingRotationAction;
               }
             }
             break;
@@ -328,11 +343,14 @@ public class GameSystem : SystemBase {
             case ActionState.PlayingRotationAction: {
               var activeHand = GetComponent<Hand>(activeHandEntity);
               var activeAction = GetComponent<Action>(activeHand.ActionEntity);
+              var boardTiles = GetBuffer<BoardTileEntry>(boardEntity);
+              var selectedBoardTile = boardTiles[activeAction.SelectedBoardTileIndex];
               
-              // TODO: Rotate the Tile
               // TODO: remove selected card from hand
               // TODO: insert selected card into the deck
               // TODO: may be wise to flush the selected element cards buffer as well as part of wrapper method for resetting action?
+              selectedBoardTile.CardinalRotation = CardinalRotation.East;
+              boardTiles[activeAction.SelectedBoardTileIndex] = selectedBoardTile;
               SetComponent(activeHand.ActionEntity, default(Action));
               Debug.Log($"Playing the sick rotate!");
               game.ActionState = ActionState.Base;

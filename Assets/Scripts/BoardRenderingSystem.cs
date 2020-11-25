@@ -116,6 +116,10 @@ public class BoardRenderingSystem : SystemBase {
         var position = boardTile.BoardPosition.ToWorldPosition();
         var rotation = boardTile.CardinalRotation.ToWorldRotation();
 
+        // Set the actual tile position and rotation
+        EntityManager.SetComponentData(boardTile.Entity, new Translation { Value = position });
+        EntityManager.SetComponentData(boardTile.Entity, new Rotation { Value = rotation });
+        // Set the rendered prefab's properties and transform
         renderTile.SetElementalMaterials(renderGameObjects, tile);
         renderTileInstance.Instance.transform.SetPositionAndRotation(position, rotation);
       }

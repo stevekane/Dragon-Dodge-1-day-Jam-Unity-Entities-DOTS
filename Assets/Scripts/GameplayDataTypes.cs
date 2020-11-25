@@ -77,8 +77,18 @@ public struct Hand : IComponentData {
 
 public struct Action : IComponentData {
   public CardinalRotation SelectedCardinalRotation;
-  public Entity SelectedTileEntity;
+  public int SelectedBoardTileIndex;
+  public Entity SelectedHandTileEntity;
   public Entity SelectedSpellCardEntity;
+
+  public static Action Default() {
+    return new Action {
+      SelectedCardinalRotation = CardinalRotation.North,
+      SelectedBoardTileIndex = -1,
+      SelectedHandTileEntity = Entity.Null,
+      SelectedSpellCardEntity = Entity.Null
+    };
+  }
 }
 
 [Serializable]

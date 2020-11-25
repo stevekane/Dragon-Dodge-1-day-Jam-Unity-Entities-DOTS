@@ -7,14 +7,14 @@ public class HandAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
   public GameObject TilesRoot;
   public GameObject SpellCardsRoot;
   public GameObject ElementCardsRoot;
-  public GameObject Action;
+  public GameObject ActionRoot;
   public Player OwningPlayer;
 
   public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem) {
     var tilesRootEntity = conversionSystem.GetPrimaryEntity(TilesRoot);
     var spellCardsRootEntity = conversionSystem.GetPrimaryEntity(SpellCardsRoot);
     var elementCardsRootEntity = conversionSystem.GetPrimaryEntity(ElementCardsRoot);
-    var actionEntity = conversionSystem.GetPrimaryEntity(Action);
+    var actionEntity = conversionSystem.GetPrimaryEntity(ActionRoot);
 
     // Identity the player for each hand
     if (OwningPlayer == Player.Player1) {
@@ -35,11 +35,7 @@ public class HandAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
     dstManager.AddBuffer<ElementCardEntry>(elementCardsRootEntity);
 
     // Add action entity storing the current state of a given action
-    dstManager.AddComponentData(actionEntity, new Action {
-      SelectedCardinalRotation = CardinalRotation.North,
-      SelectedTileEntity = Entity.Null,
-      SelectedSpellCardEntity = Entity.Null
-    });
+    dstManager.AddComponentData(actionEntity, Action.Default());
 
     // Add buffer to the actionEntity to store a list of selected element cards
     dstManager.AddBuffer<ElementCardEntry>(actionEntity);

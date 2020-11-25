@@ -80,7 +80,7 @@ MonoBehaviour:
   TilesRoot: {fileID: 3312626781900225074}
   SpellCardsRoot: {fileID: 3312626781766048549}
   ElementCardsRoot: {fileID: 3312626781991649137}
-  Action: {fileID: 668478837395702442}
+  ActionRoot: {fileID: 668478837395702442}
   OwningPlayer: 0
 --- !u!1 &3312626781766048549
 GameObject:
