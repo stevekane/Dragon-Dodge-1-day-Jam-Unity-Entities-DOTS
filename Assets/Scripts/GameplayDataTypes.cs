@@ -102,7 +102,17 @@ public struct BoardTileEntry : IBufferElementData {
   public Entity Entity;
 }
 
-public struct BoardPieceEntry : IBufferElementData {
+public struct BoardDragonEntry : IBufferElementData {
+  public int2 BoardPosition;
+  public Entity Entity;
+}
+
+public struct BoardPlayer1WizardEntry : IBufferElementData {
+  public int2 BoardPosition;
+  public Entity Entity;
+}
+
+public struct BoardPlayer2WizardEntry : IBufferElementData {
   public int2 BoardPosition;
   public Entity Entity;
 }

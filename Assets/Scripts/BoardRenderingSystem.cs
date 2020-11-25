@@ -95,6 +95,79 @@ public class BoardRendererLifeCycleSystem : SystemBase {
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 [UpdateAfter(typeof(BoardRendererLifeCycleSystem))]
 public class BoardRenderingSystem : SystemBase {
+  public static void RenderBoardTiles(
+  EntityManager entityManager,
+  Entity boardEntity,
+  RenderGameObjects renderGameObjects) {
+    var tileBuffer = entityManager.GetBuffer<BoardTileEntry>(boardEntity);
+
+    for (int i = 0; i < tileBuffer.Length; i++) {
+      var boardTile = tileBuffer[i];
+      var tile = entityManager.GetComponentData<Tile>(boardTile.Entity);
+      var renderTileInstance = entityManager.GetComponentObject<RenderTileInstance>(boardTile.Entity);
+      var renderTile = renderTileInstance.Instance.GetComponent<RenderTile>();
+      var position = boardTile.BoardPosition.ToWorldPosition();
+      var rotation = boardTile.CardinalRotation.ToWorldRotation();
+
+      entityManager.SetComponentData(boardTile.Entity, new Translation { Value = position });
+      entityManager.SetComponentData(boardTile.Entity, new Rotation { Value = rotation });
+      renderTile.SetElementalMaterials(renderGameObjects, tile);
+      renderTileInstance.Instance.transform.SetPositionAndRotation(position, rotation);
+    }
+  }
+
+  public static void RenderBoardWizards(
+  EntityManager entityManager,
+  Entity boardEntity,
+  RenderGameObjects renderGameObjects) {
+    var player1WizardBuffer = entityManager.GetBuffer<BoardPlayer1WizardEntry>(boardEntity);
+    var player2WizardBuffer = entityManager.GetBuffer<BoardPlayer2WizardEntry>(boardEntity);
+
+    for (var i = 0; i < player1WizardBuffer.Length; i++) {
+      var boardWizard = player1WizardBuffer[i];
+      var renderWizardInstance = entityManager.GetComponentObject<RenderWizardInstance>(boardWizard.Entity);
+      var renderWizard = renderWizardInstance.Instance.GetComponent<RenderWizard>();
+      var position = boardWizard.BoardPosition.ToWorldPosition();
+      var rotation = Quaternion.identity;
+
+      entityManager.SetComponentData(boardWizard.Entity, new Translation { Value = position });
+      entityManager.SetComponentData(boardWizard.Entity, new Rotation { Value = rotation });
+      renderWizard.SetMaterialForPlayerIndex(renderGameObjects.Team1Material, renderGameObjects.Team2Material, 0);
+      renderWizard.transform.SetPositionAndRotation(position, rotation);
+    }
+
+    for (var i = 0; i < player2WizardBuffer.Length; i++) {
+      var boardWizard = player2WizardBuffer[i];
+      var renderWizardInstance = entityManager.GetComponentObject<RenderWizardInstance>(boardWizard.Entity);
+      var renderWizard = renderWizardInstance.Instance.GetComponent<RenderWizard>();
+      var position = boardWizard.BoardPosition.ToWorldPosition();
+      var rotation = Quaternion.identity;
+
+      entityManager.SetComponentData(boardWizard.Entity, new Translation { Value = position });
+      entityManager.SetComponentData(boardWizard.Entity, new Rotation { Value = rotation });
+      renderWizard.SetMaterialForPlayerIndex(renderGameObjects.Team1Material, renderGameObjects.Team2Material, 1);
+      renderWizard.transform.SetPositionAndRotation(position, rotation);
+    }
+  }
+
+  public static void RenderBoardDragons(
+  EntityManager entityManager,
+  Entity boardEntity,
+  RenderGameObjects renderGameObjects) {
+    var dragonBuffer = entityManager.GetBuffer<BoardDragonEntry>(boardEntity);
+
+    for (var i = 0; i < dragonBuffer.Length; i++) {
+      var boardDragon = dragonBuffer[i];
+      var renderDragonInstance = entityManager.GetComponentObject<RenderDragonInstance>(boardDragon.Entity);
+      var position = boardDragon.BoardPosition.ToWorldPosition();
+      var rotation = Quaternion.identity;
+
+      entityManager.SetComponentData(boardDragon.Entity, new Translation { Value = position });
+      entityManager.SetComponentData(boardDragon.Entity, new Rotation { Value = rotation });
+      renderDragonInstance.Instance.transform.SetPositionAndRotation(position, rotation);
+    }
+  }
+
   protected override void OnCreate() {
     RequireSingletonForUpdate<Board>();
   }
@@ -105,24 +178,11 @@ public class BoardRenderingSystem : SystemBase {
 
     Entities
     .WithName("Render_Board")
-    .ForEach((Entity entity, in Board board) => {
-      var tileBuffer = EntityManager.GetBuffer<BoardTileEntry>(entity);
-
-      for (int i = 0; i < tileBuffer.Length; i++) {
-        var boardTile = tileBuffer[i];
-        var tile = EntityManager.GetComponentData<Tile>(boardTile.Entity);
-        var renderTileInstance = EntityManager.GetComponentObject<RenderTileInstance>(boardTile.Entity);
-        var renderTile = renderTileInstance.Instance.GetComponent<RenderTile>();
-        var position = boardTile.BoardPosition.ToWorldPosition();
-        var rotation = boardTile.CardinalRotation.ToWorldRotation();
-
-        // Set the actual tile position and rotation
-        EntityManager.SetComponentData(boardTile.Entity, new Translation { Value = position });
-        EntityManager.SetComponentData(boardTile.Entity, new Rotation { Value = rotation });
-        // Set the rendered prefab's properties and transform
-        renderTile.SetElementalMaterials(renderGameObjects, tile);
-        renderTileInstance.Instance.transform.SetPositionAndRotation(position, rotation);
-      }
+    .WithAll<Board>()
+    .ForEach((Entity entity) => {
+      RenderBoardTiles(EntityManager, entity, renderGameObjects);
+      RenderBoardDragons(EntityManager, entity, renderGameObjects);
+      RenderBoardWizards(EntityManager, entity, renderGameObjects);
     })
     .WithoutBurst()
     .Run();

@@ -27,7 +27,7 @@ public class GameSystem : SystemBase {
 
   // TODO: I think you could do this with a custom collector to avoid allocating the raycastHits
   public static bool TryPick<T>(
-  ComponentDataFromEntity<T> componentDataFromEntity,
+  EntityManager entityManager,
   in CollisionWorld collisionWorld,
   in Ray ray,
   out RaycastHit raycastHit,
@@ -42,7 +42,7 @@ public class GameSystem : SystemBase {
 
     if (collisionWorld.CastRay(raycastInput, ref raycastHits)) {
       for (var i = 0; i < raycastHits.Length; i++) {
-        if (componentDataFromEntity.HasComponent(raycastHits[i].Entity)) {
+        if (entityManager.HasComponent<T>(raycastHits[i].Entity)) {
           raycastHit = raycastHits[i];
           return true;
         }
@@ -69,31 +69,6 @@ public class GameSystem : SystemBase {
     return false;
   }
 
-  // TODO: QUERIES
-  // You should be able to check if a tile is on the board and where it is
-  // You should be able to query for all empty spaces on the board
-  // You should be able to query for all tiles nearby a specified tile
-  // You should be able to query for all empty spaces nearby a specified tile
-
-  // I'd like to query the board for empty positions, tiles, dragons, and wizards
-  // There are several ways I can think of to do this:
-  // Store separate buffers for each thing: tiles, dragons, wizards
-  // Store the buffer as a dense 2d-array where entries pointing at Entity.Null contain nothing
-  // Store a sparse buffer where each entry stores its own tilePosition
-  // Queries that find no matches into the sparse buffer are therefore empty
-  // Queries against the sparse data have two key weaknesses:
-  //    They O(n)
-  //    They allow multiple entries to share the same tilePosition even if that is illogical
-  // Storing sparse data is simpler and takes less space
-  //    All queries are just scanning a list for entries which match your search function
-  //
-  // After a sort of "gut check" I am leaning towards the following solution:
-  //    There are things on the board. Those things are always a pair: TilePosition and Entity
-  //    The board is just a list of these pairs
-  //    In this way, no entity's data is polluted with board-only information (position)
-  //    and queries are simply performed by scanning this array with some predicate. 
-  //    I believe, overall, this is the simplest and most scalable solution
-
   public static void PlaceTilesOnBoard(    
   EntityManager entityManager,
   EntityQuery tileQuery,
@@ -110,21 +85,57 @@ public class GameSystem : SystemBase {
     ref var player1WizardPositions = ref boardConfiguration.Reference.Value.Player1Positions;
     ref var player2WizardPositions = ref boardConfiguration.Reference.Value.Player2Positions;
     var boardTiles = entityManager.GetBuffer<BoardTileEntry>(boardEntity);
-    var boardPieces = entityManager.GetBuffer<BoardPieceEntry>(boardEntity);
+    var boardDragons = entityManager.GetBuffer<BoardDragonEntry>(boardEntity);
+    var boardPlayer1Wizards = entityManager.GetBuffer<BoardPlayer1WizardEntry>(boardEntity);
+    var boardPlayer2Wizards = entityManager.GetBuffer<BoardPlayer2WizardEntry>(boardEntity);
     var tileIndex = 0;
     var dragonIndex = 0;
-    var player1Index = 0;
-    var player2Index = 0;
+    var player1WizardIndex = 0;
+    var player2WizardIndex = 0;
 
-    boardTiles.Length = boardTilePositions.Length;
     for (int i = 0; i < boardTilePositions.Length; i++) {
-      boardTiles[i] = new BoardTileEntry { 
+      boardTiles.Add(new BoardTileEntry { 
         BoardPosition = boardTilePositions[i], 
         CardinalRotation = CardinalRotation.North, 
         Entity = tileEntities[tileIndex] 
-      };
+      });
       tileIndex++;
     }
+
+    for (int i = 0; i < dragonTilePositions.Length; i++) {
+      boardDragons.Add(new BoardDragonEntry {
+        BoardPosition = dragonTilePositions[i],
+        Entity = dragonEntities[dragonIndex]
+      });
+      dragonIndex++;
+    }
+
+    for (int i = 0; i < wizardEntities.Length; i++) {
+      var playerIndex = entityManager.GetComponentData<PlayerIndex>(wizardEntities[i]);
+
+      if (playerIndex.Value % 2 == 0) {
+        boardPlayer1Wizards.Add(new BoardPlayer1WizardEntry {
+          BoardPosition = player1WizardPositions[player1WizardIndex],
+          Entity = wizardEntities[i]
+        });
+        player1WizardIndex++;
+      } else {
+        boardPlayer2Wizards.Add(new BoardPlayer2WizardEntry {
+          BoardPosition = player2WizardPositions[player2WizardIndex],
+          Entity = wizardEntities[i]
+        });
+        player2WizardIndex++;
+      }
+    }
+
+    for (int i = 0; i < player1WizardPositions.Length; i++) {
+      boardPlayer1Wizards.Add(new BoardPlayer1WizardEntry {
+        BoardPosition = player1WizardPositions[i],
+        Entity = wizardEntities[i]
+      });
+      player1WizardIndex++;
+    }
+
     tileEntities.Dispose();
     dragonEntities.Dispose();
     wizardEntities.Dispose();
@@ -245,16 +256,18 @@ public class GameSystem : SystemBase {
     EntityManager.CreateEntity(typeof(Game));
     EntityManager.CreateEntity(typeof(ElementCardDeck), typeof(ElementCardEntry));
     EntityManager.CreateEntity(typeof(SpellCardDeck), typeof(SpellCardEntry));
-    EntityManager.CreateEntity(typeof(Board), typeof(BoardPieceEntry), typeof(BoardTileEntry));
+    EntityManager.CreateEntity(
+      typeof(Board), 
+      typeof(BoardTileEntry), 
+      typeof(BoardDragonEntry), 
+      typeof(BoardPlayer1WizardEntry),
+      typeof(BoardPlayer2WizardEntry));
   }
 
   protected override void OnUpdate() {
     var sceneSystem = SceneSystem;
     var elementCardDeckEntity = GetSingletonEntity<ElementCardDeck>();
     var spellCardDeckEntity = GetSingletonEntity<SpellCardDeck>();
-    var tileFromEntity = GetComponentDataFromEntity<Tile>(isReadOnly: true);
-    var spellCardFromEntity = GetComponentDataFromEntity<SpellCard>(isReadOnly: true);
-    var elementCardFromEntity = GetComponentDataFromEntity<SpellCard>(isReadOnly: true);
     var collisionWorld = BuildPhysicsWorld.PhysicsWorld.CollisionWorld;
     var mouseDown = Input.GetMouseButtonDown(0);
     var screenRay = MainCamera.ScreenPointToRay(Input.mousePosition);
@@ -293,7 +306,7 @@ public class GameSystem : SystemBase {
 
           switch (game.ActionState) {
             case ActionState.Base: {
-              if (mouseDown && TryPick<SpellCard>(spellCardFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
+              if (mouseDown && TryPick<SpellCard>(EntityManager, collisionWorld, screenRay, out RaycastHit raycastHit)) {
                 var spellCardEntity = raycastHit.Entity;
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
@@ -301,7 +314,6 @@ public class GameSystem : SystemBase {
                 
                 // TODO: you must check what type of card this actually is...
                 if (spellCardEntitiesInHand.Contains(spellCardEntity)) {
-                  Debug.Log("You clicked a spell card in your hand!");
                   activeAction.SelectedSpellCardEntity = spellCardEntity;
                   SetComponent<Action>(activeHand.ActionEntity, activeAction);
                   game.ActionState = ActionState.RotateCardSelected;
@@ -311,13 +323,12 @@ public class GameSystem : SystemBase {
             break;
 
             case ActionState.RotateCardSelected: {
-              if (mouseDown && TryPick<Tile>(tileFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
+              if (mouseDown && TryPick<Tile>(EntityManager, collisionWorld, screenRay, out RaycastHit raycastHit)) {
                 var tileEntity = raycastHit.Entity;
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
                 if (TryGetBoardTileIndex(EntityManager, boardEntity, raycastHit.Entity, out int boardTileIndex)) {
-                  Debug.Log($"You clicked a tile to rotate!");
                   activeAction.SelectedBoardTileIndex = boardTileIndex;
                   SetComponent<Action>(activeHand.ActionEntity, activeAction);
                   game.ActionState = ActionState.BoardTileToRotateSelected;
@@ -327,13 +338,12 @@ public class GameSystem : SystemBase {
             break;
 
             case ActionState.BoardTileToRotateSelected: {
-              if (mouseDown && TryPick<Tile>(tileFromEntity, collisionWorld, screenRay, out RaycastHit raycastHit)) {
+              if (mouseDown && TryPick<Tile>(EntityManager, collisionWorld, screenRay, out RaycastHit raycastHit)) {
                 var tileEntity = raycastHit.Entity;
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
                 // TODO: invent some kind of UI to actually select the rotation you want
-                Debug.Log($"You chose a cardinal rotation!");
                 activeAction.SelectedCardinalRotation = CardinalRotation.East;
                 SetComponent<Action>(activeHand.ActionEntity, activeAction);
                 game.ActionState = ActionState.PlayingRotationAction;
@@ -354,7 +364,6 @@ public class GameSystem : SystemBase {
               selectedBoardTile.CardinalRotation = CardinalRotation.East;
               boardTiles[activeAction.SelectedBoardTileIndex] = selectedBoardTile;
               SetComponent(activeHand.ActionEntity, default(Action));
-              Debug.Log($"Playing the sick rotate!");
               game.ActionState = ActionState.Base;
             }
             break;
