@@ -17,6 +17,19 @@ public static class Extensions {
     return false;
   }
 
+  public static bool Remove<T>(
+  this DynamicBuffer<T> xs,
+  in T x) 
+  where T : struct {
+    for (int i = 0; i < xs.Length; i++) {
+      if (xs[i].Equals(x)) {
+        xs.RemoveAtSwapBack(i);
+        return true;
+      }
+    }
+    return false;
+  }
+
   public static void Shuffle<T>(
   this DynamicBuffer<T> xs, 
   in uint seed) 

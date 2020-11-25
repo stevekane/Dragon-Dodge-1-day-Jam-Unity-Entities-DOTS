@@ -332,8 +332,9 @@ public class GameSystem : SystemBase {
                 var activeHand = GetComponent<Hand>(activeHandEntity);
                 var activeAction = GetComponent<Action>(activeHand.ActionEntity);
 
+                // TODO: invent some kind of UI to actually select the rotation you want
                 Debug.Log($"You chose a cardinal rotation!");
-                activeAction.SelectedCardinalRotation = CardinalRotation.East; // TODO: obviously should be an actual rotation value...
+                activeAction.SelectedCardinalRotation = CardinalRotation.East;
                 SetComponent<Action>(activeHand.ActionEntity, activeAction);
                 game.ActionState = ActionState.PlayingRotationAction;
               }
@@ -344,11 +345,12 @@ public class GameSystem : SystemBase {
               var activeHand = GetComponent<Hand>(activeHandEntity);
               var activeAction = GetComponent<Action>(activeHand.ActionEntity);
               var boardTiles = GetBuffer<BoardTileEntry>(boardEntity);
+              var handSpellCards = GetBuffer<SpellCardEntry>(activeHand.SpellCardsRootEntity).Reinterpret<Entity>();
               var selectedBoardTile = boardTiles[activeAction.SelectedBoardTileIndex];
+              var spellCardDeck = GetBuffer<SpellCardEntry>(spellCardDeckEntity).Reinterpret<Entity>();
               
-              // TODO: remove selected card from hand
-              // TODO: insert selected card into the deck
-              // TODO: may be wise to flush the selected element cards buffer as well as part of wrapper method for resetting action?
+              spellCardDeck.Add(activeAction.SelectedSpellCardEntity);
+              handSpellCards.Remove(activeAction.SelectedSpellCardEntity);
               selectedBoardTile.CardinalRotation = CardinalRotation.East;
               boardTiles[activeAction.SelectedBoardTileIndex] = selectedBoardTile;
               SetComponent(activeHand.ActionEntity, default(Action));
