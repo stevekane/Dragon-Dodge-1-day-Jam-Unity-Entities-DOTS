@@ -1,5 +1,7 @@
 ﻿using System;
 using Unity.Entities;
+using Unity.Mathematics;
+using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
 public static class Extensions {
@@ -29,5 +31,15 @@ public static class Extensions {
       xs[k] = xs[n];
       xs[n] = value;  
     }  
+  }
+
+  public static float3 ToWorldPosition(
+  this int2 tp) {
+    return new float3(tp.x, 0, tp.y);
+  }
+
+  public static quaternion ToWorldRotation(
+  this CardinalRotation cardinalRotation) {
+    return Quaternion.AngleAxis(90 * (int)cardinalRotation, Vector3.up);
   }
 }

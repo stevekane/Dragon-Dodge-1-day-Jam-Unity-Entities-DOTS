@@ -1,8 +1,6 @@
 ﻿using System;
 using Unity.Mathematics;
 using Unity.Entities;
-using UnityEngine;
-using static Unity.Mathematics.math;
 
 public enum Element { 
   Earth, 
@@ -36,24 +34,6 @@ public enum ActionState {
   RotateCardSelected,
   BoardTileToRotateSelected,
   PlayingRotationAction
-}
-
-public struct PlayerAction : IComponentData {}
-
-public struct SelectCard : IComponentData {
-  public Entity Value;
-}
-
-public struct SelectTile : IComponentData {
-  public Entity Value;
-}
-
-public struct SelectTilePosition : IComponentData {
-  public int2 Value;
-}
-
-public struct SelectCardinalRotation : IComponentData {
-  public CardinalRotation Value;
 }
 
 public struct ElementCard : IComponentData {
@@ -109,37 +89,20 @@ public struct Tile : IComponentData {
   public Element West;
 }
 
-public struct EmptySpace : IComponentData {}
-
-public struct TilePosition : IComponentData {
-  public int2 Value;
-
-  public Vector3 WorldPosition {
-    get { return new Vector3(Value.x, 0, Value.y); } 
-  }
-
-  public static TilePosition FromWorldPosition(in Vector3 worldPosition) {
-    return new TilePosition { Value = int2((int)worldPosition.x, (int)worldPosition.z) };
-  }
-}
-
-public struct TileRotation : IComponentData {
-  const float QUARTER_ROTATION_DEGREES = 90f;
-
-  public CardinalRotation Value;
-
-  public Quaternion WorldRotation {
-    get { return Quaternion.AngleAxis((float)Value * QUARTER_ROTATION_DEGREES, Vector3.up); }
-  }
-}
-
 public struct Wizard : IComponentData {}
 
 public struct Dragon : IComponentData {}
 
 public struct Board : IComponentData {}
 
-public struct BoardEntry : IBufferElementData {
+public struct BoardTileEntry : IBufferElementData {
+  public int2 BoardPosition;
+  public CardinalRotation CardinalRotation;
+  public Entity Entity;
+}
+
+public struct BoardPieceEntry : IBufferElementData {
+  public int2 BoardPosition;
   public Entity Entity;
 }
 

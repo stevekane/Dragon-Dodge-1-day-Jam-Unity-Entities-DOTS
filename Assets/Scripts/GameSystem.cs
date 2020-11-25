@@ -17,6 +17,8 @@ public class GameSystem : SystemBase {
 
   EntityQuery LoadingSubSceneQuery;
   EntityQuery TileQuery;
+  EntityQuery DragonQuery;
+  EntityQuery WizardQuery;
   EntityQuery SpellCardQuery;
   EntityQuery ElementCardQuery;
 
@@ -56,41 +58,59 @@ public class GameSystem : SystemBase {
   // You should be able to query for all tiles nearby a specified tile
   // You should be able to query for all empty spaces nearby a specified tile
 
-  public static int To1DIndex(
-  in int2 v, 
-  in int2 dimensions) {
-    var min = -(dimensions - new int2(1,1)) / 2;
-    var p = v - min;
-
-    return p.x * dimensions.y + p.y;
-  }
+  // I'd like to query the board for empty positions, tiles, dragons, and wizards
+  // There are several ways I can think of to do this:
+  // Store separate buffers for each thing: tiles, dragons, wizards
+  // Store the buffer as a dense 2d-array where entries pointing at Entity.Null contain nothing
+  // Store a sparse buffer where each entry stores its own tilePosition
+  // Queries that find no matches into the sparse buffer are therefore empty
+  // Queries against the sparse data have two key weaknesses:
+  //    They O(n)
+  //    They allow multiple entries to share the same tilePosition even if that is illogical
+  // Storing sparse data is simpler and takes less space
+  //    All queries are just scanning a list for entries which match your search function
+  //
+  // After a sort of "gut check" I am leaning towards the following solution:
+  //    There are things on the board. Those things are always a pair: TilePosition and Entity
+  //    The board is just a list of these pairs
+  //    In this way, no entity's data is polluted with board-only information (position)
+  //    and queries are simply performed by scanning this array with some predicate. 
+  //    I believe, overall, this is the simplest and most scalable solution
 
   public static void PlaceTilesOnBoard(    
   EntityManager entityManager,
   EntityQuery tileQuery,
+  EntityQuery dragonQuery,
+  EntityQuery wizardQuery,
   Entity boardSetupEntity,
   Entity boardEntity) {
-    using (var tileEntities = tileQuery.ToEntityArray(Allocator.Temp)) {
-      var boardConfiguration = entityManager.GetComponentData<BoardSetup>(boardSetupEntity);
-      ref var boardDimensions = ref boardConfiguration.Reference.Value.Dimensions;
-      ref var boardTilePositions = ref boardConfiguration.Reference.Value.TilePositions;
-      var boardBuffer = entityManager.GetBuffer<BoardEntry>(boardEntity);
-      var tileIndex = 0;
+    var tileEntities = tileQuery.ToEntityArray(Allocator.Temp);
+    var dragonEntities = dragonQuery.ToEntityArray(Allocator.Temp);
+    var wizardEntities = wizardQuery.ToEntityArray(Allocator.Temp);
+    var boardConfiguration = entityManager.GetComponentData<BoardSetup>(boardSetupEntity);
+    ref var boardTilePositions = ref boardConfiguration.Reference.Value.TilePositions;
+    ref var dragonTilePositions = ref boardConfiguration.Reference.Value.DragonPositions;
+    ref var player1WizardPositions = ref boardConfiguration.Reference.Value.Player1Positions;
+    ref var player2WizardPositions = ref boardConfiguration.Reference.Value.Player2Positions;
+    var boardTiles = entityManager.GetBuffer<BoardTileEntry>(boardEntity);
+    var boardPieces = entityManager.GetBuffer<BoardPieceEntry>(boardEntity);
+    var tileIndex = 0;
+    var dragonIndex = 0;
+    var player1Index = 0;
+    var player2Index = 0;
 
-      boardBuffer.Length = boardDimensions.x * boardDimensions.y;
-      for (int i = 0; i < boardTilePositions.Length; i++) {
-        var boardTilePosition = boardTilePositions[i];
-        var index = To1DIndex(boardTilePosition, boardDimensions);
-        var tilePosition = new TilePosition { Value = boardTilePosition };
-        var tileTranslation = new Translation { Value = tilePosition.WorldPosition };
-        var tileEntity = tileEntities[tileIndex];
-
-        boardBuffer[index] = new BoardEntry { Entity = tileEntity };
-        entityManager.SetComponentData(tileEntity, tileTranslation);
-        entityManager.SetComponentData(tileEntity, tilePosition);
-        tileIndex++;
-      }
+    boardTiles.Length = boardTilePositions.Length;
+    for (int i = 0; i < boardTilePositions.Length; i++) {
+      boardTiles[i] = new BoardTileEntry { 
+        BoardPosition = boardTilePositions[i], 
+        CardinalRotation = CardinalRotation.North, 
+        Entity = tileEntities[tileIndex] 
+      };
+      tileIndex++;
     }
+    tileEntities.Dispose();
+    dragonEntities.Dispose();
+    wizardEntities.Dispose();
   }
 
   public static void ReturnCardsToDeck(
@@ -199,6 +219,8 @@ public class GameSystem : SystemBase {
     MainCamera = Camera.main;
     LoadingSubSceneQuery = EntityManager.CreateEntityQuery(typeof(SceneReference));
     TileQuery = EntityManager.CreateEntityQuery(typeof(Tile));
+    DragonQuery = EntityManager.CreateEntityQuery(typeof(Dragon));
+    WizardQuery = EntityManager.CreateEntityQuery(typeof(Wizard));
     SpellCardQuery = EntityManager.CreateEntityQuery(typeof(SpellCard));
     ElementCardQuery = EntityManager.CreateEntityQuery(typeof(ElementCard));
     SceneSystem = World.GetExistingSystem<SceneSystem>();
@@ -206,7 +228,7 @@ public class GameSystem : SystemBase {
     EntityManager.CreateEntity(typeof(Game));
     EntityManager.CreateEntity(typeof(ElementCardDeck), typeof(ElementCardEntry));
     EntityManager.CreateEntity(typeof(SpellCardDeck), typeof(SpellCardEntry));
-    EntityManager.CreateEntity(typeof(Board), typeof(BoardEntry));
+    EntityManager.CreateEntity(typeof(Board), typeof(BoardPieceEntry), typeof(BoardTileEntry));
   }
 
   protected override void OnUpdate() {
@@ -237,7 +259,7 @@ public class GameSystem : SystemBase {
           var boardSetupEntity = GetSingletonEntity<BoardSetup>();
           var activeHandEntity = game.CurrentTurnPlayerIndex % 2 == 0 ? player1HandEntity : player2HandEntity;
 
-          PlaceTilesOnBoard(EntityManager, TileQuery, boardSetupEntity, boardEntity);
+          PlaceTilesOnBoard(EntityManager, TileQuery, DragonQuery, WizardQuery, boardSetupEntity, boardEntity);
           ReturnCardsToDeck(EntityManager, player1HandEntity, player2HandEntity, spellCardDeckEntity, elementCardDeckEntity, SpellCardQuery, ElementCardQuery);
           ShuffleCardsInDeck(EntityManager, spellCardDeckEntity, elementCardDeckEntity, 1);
           DrawCardsForTurn(EntityManager, activeHandEntity, spellCardDeckEntity, elementCardDeckEntity);
@@ -306,12 +328,11 @@ public class GameSystem : SystemBase {
             case ActionState.PlayingRotationAction: {
               var activeHand = GetComponent<Hand>(activeHandEntity);
               var activeAction = GetComponent<Action>(activeHand.ActionEntity);
-              var tileRotation = GetComponent<TileRotation>(activeAction.SelectedTileEntity);
-
+              
+              // TODO: Rotate the Tile
               // TODO: remove selected card from hand
               // TODO: insert selected card into the deck
               // TODO: may be wise to flush the selected element cards buffer as well as part of wrapper method for resetting action?
-              SetComponent(activeAction.SelectedTileEntity, new TileRotation { Value = activeAction.SelectedCardinalRotation });
               SetComponent(activeHand.ActionEntity, default(Action));
               Debug.Log($"Playing the sick rotate!");
               game.ActionState = ActionState.Base;

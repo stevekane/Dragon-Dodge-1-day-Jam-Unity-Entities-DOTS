@@ -27,7 +27,5 @@ public class TileAuthoring : MonoBehaviour, IConvertGameObjectToEntity {
 
   public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem) {
     dstManager.AddComponentData(entity, Tile);
-    dstManager.AddComponentData(entity, TilePosition.FromWorldPosition(transform.position));
-    dstManager.AddComponentData(entity, new TileRotation { Value = 0 });
   }
 }

@@ -166,9 +166,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 874448ee8df6b364fb622cb939fa3e9e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Dimensions:
-    x: 7
-    y: 5
+  TileColor: {r: 1, g: 1, b: 1, a: 1}
+  DragonColor: {r: 1, g: 0, b: 0, a: 1}
+  Player1Color: {r: 0, g: 1, b: 0, a: 1}
+  Player2Color: {r: 0, g: 0, b: 1, a: 1}
+  TileSize: {x: 0.9, y: 0, z: 0.9}
+  WizardSize: {x: 0.5, y: 1, z: 0.5}
+  DragonRadius: 0.5
   TilePositions:
   - x: -3
     y: -1
@@ -218,3 +222,18 @@ MonoBehaviour:
     y: 0
   - x: 3
     y: -1
+  DragonPositions:
+  - x: -3
+    y: 0
+  - x: 3
+    y: 0
+  Player1Positions:
+  - x: -1
+    y: -2
+  - x: 1
+    y: -2
+  Player2Positions:
+  - x: -1
+    y: 2
+  - x: 1
+    y: 2
