@@ -17,10 +17,12 @@ MonoBehaviour:
   RenderBoardDragon: {fileID: 8712534155992576530, guid: 87864b069fae7174d9efd7df3730231f, type: 3}
   RenderHand: {fileID: 7633480550401759987, guid: 9967d48f579615844ac1b5f98081ccf6, type: 3}
   HandRenderTile: {fileID: 4920842591525604008, guid: c627aae451865744cbb04f20dd81e0d5, type: 3}
+  HandRenderElementCardUnknown: {fileID: 1651877306072725791, guid: 1152a56980fa5e047aa7ca4f00690158, type: 3}
   HandRenderElementCardEarth: {fileID: 8714163364622519532, guid: ea40736b8329292458ec5281bdb346fc, type: 3}
   HandRenderElementCardFire: {fileID: 2878166485642639736, guid: 5023623c4356c874f97a743806018c4b, type: 3}
   HandRenderElementCardWind: {fileID: 1239047105061887269, guid: ffe2a6d4e59bc8545826154d733dc970, type: 3}
   HandRenderElementCardWater: {fileID: 3791185120889261224, guid: 2100ea7dcf61c574b8c31e7244331d71, type: 3}
+  HandRenderSpellCardUnknown: {fileID: 7341212471554739050, guid: fe3f826b761ba6d4e804c4a9265f9497, type: 3}
   HandRenderSpellCardRotate: {fileID: 5562352744868139580, guid: a0ead5a4c49c9024d912b3cc6d443e38, type: 3}
   HandRenderSpellCardMove: {fileID: 302704458151758226, guid: f48188a158836544aabd1f3b86abba98, type: 3}
   HandRenderSpellCardPlace: {fileID: 9095743353353112967, guid: 3b98a10b9c3e90f49be916d9940caa19, type: 3}
